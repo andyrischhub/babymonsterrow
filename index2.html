@@ -1,0 +1,3259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Babymonster Guild Manager</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Prompt', sans-serif;
+}
+
+.drag-over {
+    background-color: rgba(59,130,246,.12) !important;
+    border: 2px dashed #3b82f6 !important;
+}
+
+.tab-active {
+    background: linear-gradient(135deg,#7c3aed,#db2777);
+    color: white;
+    box-shadow: 0 4px 15px rgba(124,58,237,.25);
+}
+
+.today-card {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 1px rgba(34,197,94,.25),
+                0 0 20px rgba(34,197,94,.08);
+}
+
+.status-btn {
+    transition: all .15s ease;
+}
+
+.status-btn:hover {
+    transform: translateY(-1px);
+}
+
+.member-card {
+    transition: all .15s ease;
+}
+
+.member-card:hover {
+    transform: translateY(-1px);
+}
+
+.scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+</style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-16">
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 shadow-xl">
+
+    <div class="max-w-[1500px] mx-auto px-4 py-4">
+
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold">
+                        Babymonster Guild Manager
+                    </h1>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <span>Ragnarok The New World</span>
+                        <span>•</span>
+                        <span class="text-green-400">
+                            <i class="fa-solid fa-circle text-[7px]"></i>
+                            Firebase Realtime
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+
+                <div id="bangkok-clock"
+                     class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-xs text-slate-300">
+                    Bangkok: --
+                </div>
+
+                <button onclick="importFromGoogleSheet()"
+                        class="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-table-list"></i>
+                    Import Google Sheet
+                </button>
+
+                <button onclick="openMemberModal()"
+                        class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-user-plus"></i>
+                    เพิ่มสมาชิก
+                </button>
+
+                <button onclick="openGroupModal()"
+                        class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-layer-group"></i>
+                    เพิ่ม Group
+                </button>
+
+                <button onclick="exportAllGroupsToSingleImage()"
+                        class="bg-amber-600 hover:bg-amber-500 px-3 py-2 rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-image"></i>
+                    Export
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+             GUILD EVENTS
+        ====================================================== -->
+
+        <div class="mt-4">
+
+            <div class="flex items-center justify-between mb-2">
+
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-pink-400"></i>
+
+                    <h2 class="font-bold">
+                        Guild Events
+                    </h2>
+
+                    <span class="text-[10px] text-slate-500">
+                        Bangkok / UTC+7
+                    </span>
+                </div>
+
+                <button onclick="editPolarityTime()"
+                        class="text-xs text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-pen"></i>
+                    แก้เวลา Polarity Zone
+                </button>
+
+            </div>
+
+            <div id="events-calendar"
+                 class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =========================================================
+     MAIN
+========================================================= -->
+
+<main class="max-w-[1500px] mx-auto px-4 py-5">
+
+    <!-- =====================================================
+         TABS
+    ====================================================== -->
+
+    <div class="flex flex-wrap gap-2 mb-5">
+
+        <button onclick="switchTab('guildLeague')"
+                id="tab-guildLeague"
+                class="tab-btn px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm font-medium">
+            <i class="fa-solid fa-swords mr-1"></i>
+            Guild League
+        </button>
+
+        <button onclick="switchTab('polarityZone')"
+                id="tab-polarityZone"
+                class="tab-btn px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm font-medium">
+            <i class="fa-solid fa-bolt mr-1"></i>
+            Polarity Zone
+        </button>
+
+        <button onclick="switchTab('castleSiege')"
+                id="tab-castleSiege"
+                class="tab-btn px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm font-medium">
+            <i class="fa-solid fa-chess-rook mr-1"></i>
+            Castle Siege
+        </button>
+
+        <button onclick="switchTab('attendance')"
+                id="tab-attendance"
+                class="tab-btn px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm font-medium">
+            <i class="fa-solid fa-chart-column mr-1"></i>
+            Attendance
+        </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         STATUS
+    ====================================================== -->
+
+    <div id="connection-status"
+         class="mb-4 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin"></i>
+        กำลังเชื่อมต่อ Firebase...
+    </div>
+
+
+    <!-- =====================================================
+         ACTIVITY VIEW
+    ====================================================== -->
+
+    <section id="activity-view">
+
+        <div class="grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-5">
+
+            <!-- MEMBER POOL -->
+
+            <aside class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+
+                <div class="flex justify-between items-center mb-3">
+
+                    <div class="font-bold text-sm">
+                        <i class="fa-solid fa-users text-purple-400 mr-1"></i>
+                        คลังสมาชิก
+                    </div>
+
+                    <span id="pool-count"
+                          class="bg-slate-800 text-purple-300 px-2 py-1 rounded-full text-xs">
+                        0
+                    </span>
+
+                </div>
+
+                <div class="text-[11px] text-slate-500 mb-3">
+                    ลากสมาชิกเข้า Party ได้เลย
+                </div>
+
+                <div id="unassigned-pool"
+                     ondragover="allowDrop(event)"
+                     ondragleave="removeDragOver(event)"
+                     ondrop="dropToPool(event)"
+                     class="min-h-[250px] max-h-[65vh] overflow-y-auto scrollbar space-y-2">
+                </div>
+
+            </aside>
+
+
+            <!-- GROUPS -->
+
+            <section>
+
+                <div id="activity-title"
+                     class="mb-4">
+                </div>
+
+                <div id="groups-container"
+                     class="space-y-5">
+                </div>
+
+            </section>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         ATTENDANCE VIEW
+    ====================================================== -->
+
+    <section id="attendance-view" class="hidden">
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
+
+                <div>
+                    <h2 class="text-xl font-bold">
+                        <i class="fa-solid fa-chart-column text-pink-400 mr-2"></i>
+                        Attendance Analysis
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-1">
+                        วิเคราะห์การเข้าร่วมสงครามของสมาชิก
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-1">
+                            วันที่
+                        </label>
+
+                        <input id="attendance-date"
+                               type="date"
+                               onchange="renderAttendance()"
+                               class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-slate-500 mb-1">
+                            กิจกรรม
+                        </label>
+
+                        <select id="attendance-activity"
+                                onchange="renderAttendance()"
+                                class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+
+                            <option value="guildLeague">
+                                Guild League
+                            </option>
+
+                            <option value="polarityZone">
+                                Polarity Zone
+                            </option>
+
+                            <option value="castleSiege">
+                                Castle Siege
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SUMMARY -->
+
+            <div id="attendance-summary"
+                 class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            </div>
+
+
+            <!-- ATTENDANCE LIST -->
+
+            <div id="attendance-list"
+                 class="space-y-2">
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- =========================================================
+     MEMBER MODAL
+========================================================= -->
+
+<div id="member-modal"
+     class="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
+
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800">
+
+            <h3 id="member-modal-title"
+                class="font-bold">
+                เพิ่มสมาชิก
+            </h3>
+
+            <button onclick="closeMemberModal()"
+                    class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <form onsubmit="handleMemberSubmit(event)"
+              class="p-5 space-y-4">
+
+            <input type="hidden"
+                   id="edit-member-id">
+
+            <div>
+
+                <label class="text-xs text-slate-400">
+                    ชื่อตัวละคร
+                </label>
+
+                <input id="char-name"
+                       required
+                       class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            </div>
+
+
+            <div>
+
+                <label class="text-xs text-slate-400">
+                    Class
+                </label>
+
+                <select id="char-class"
+                        class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+
+                    <option>Assassin</option>
+                    <option>Monk</option>
+                    <option>Priest</option>
+                    <option>Paladin</option>
+                    <option>Knight</option>
+                    <option>Gunslinger</option>
+                    <option>Wizard</option>
+                    <option>Archer</option>
+                    <option>Druid</option>
+                    <option>Sage</option>
+                    <option>Blacksmith</option>
+                    <option>Alchemist</option>
+                    <option>Bard</option>
+                    <option>Dancer</option>
+                    <option>Star Gladiator</option>
+                    <option>Soul Linker</option>
+
+                </select>
+
+            </div>
+
+
+            <div>
+
+                <label class="text-xs text-slate-400">
+                    หมายเหตุ / Role
+                </label>
+
+                <input id="char-note"
+                       placeholder="เช่น Tank / DPS / Support"
+                       class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+
+            </div>
+
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+
+                <button type="button"
+                        onclick="closeMemberModal()"
+                        class="px-4 py-2 rounded-lg bg-slate-800">
+                    ยกเลิก
+                </button>
+
+                <button class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500">
+                    บันทึก
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     GROUP MODAL
+========================================================= -->
+
+<div id="group-modal"
+     class="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md">
+
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800">
+
+            <h3 class="font-bold">
+                เพิ่ม Group
+            </h3>
+
+            <button onclick="closeGroupModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <form onsubmit="handleGroupSubmit(event)"
+              class="p-5 space-y-4">
+
+            <div>
+
+                <label class="text-xs text-slate-400">
+                    ชื่อ Group
+                </label>
+
+                <input id="group-name"
+                       required
+                       placeholder="Group 1"
+                       class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+
+            </div>
+
+            <div>
+
+                <label class="text-xs text-slate-400">
+                    สี
+                </label>
+
+                <input id="group-color"
+                       type="color"
+                       value="#8b5cf6"
+                       class="mt-1 w-14 h-10 bg-slate-800 rounded">
+
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+
+                <button type="button"
+                        onclick="closeGroupModal()"
+                        class="px-4 py-2 bg-slate-800 rounded-lg">
+                    ยกเลิก
+                </button>
+
+                <button class="px-4 py-2 bg-indigo-600 rounded-lg">
+                    สร้าง Group
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+
+<script type="module">
+
+/* ============================================================
+   FIREBASE
+============================================================ */
+
+import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    onValue,
+    set
+}
+from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+
+
+const firebaseConfig = {
+
+    apiKey: "AIzaSyAaj2QVO-Q-A8aUGX86vokzmbXfY_h3674",
+
+    authDomain: "row-management.firebaseapp.com",
+
+    databaseURL:
+        "https://row-management-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+    projectId: "row-management",
+
+    storageBucket:
+        "row-management.firebasestorage.app",
+
+    messagingSenderId: "544904098203",
+
+    appId:
+        "1:544904098203:web:1fd1fe700045c953b6313e",
+
+    measurementId: "G-G3TG1YLDR9"
+};
+
+
+const firebaseApp = initializeApp(firebaseConfig);
+
+const db = getDatabase(firebaseApp);
+
+const DATA_REF = ref(db, "babymonsterGuild");
+
+
+/* ============================================================
+   GOOGLE SHEET
+   ใส่ URL Apps Script Web App ตรงนี้
+============================================================ */
+
+const GOOGLE_SHEET_WEBAPP_URL =
+    "https://script.google.com/macros/s/AKfycbwi_NggXxfXjAP5MgX7RUi0PkjNdvbO_X4KJC7KcuqeAcFpCVqxm-Aj_mVufrF5mePb/exec";;
+
+
+/* ============================================================
+   DEFAULT DATA
+============================================================ */
+
+const DEFAULT_EVENTS = {
+
+    monday: [],
+
+    tuesday: [
+
+        {
+            name: "Guild Banquet",
+            time: "21:00 - 21:30",
+            color: "#f59e0b"
+        },
+
+        {
+            name: "Guild League",
+            time: "21:30 - 21:35",
+            color: "#8b5cf6"
+        },
+
+        {
+            name: "Guild League",
+            time: "22:00 - 22:25",
+            color: "#8b5cf6"
+        }
+
+    ],
+
+    wednesday: [],
+
+    thursday: [
+
+        {
+            name: "Mirror World",
+            time: "21:00 - 21:15",
+            color: "#06b6d4"
+        },
+
+        {
+            name: "Hazy Forest",
+            time: "21:30 - 21:45",
+            color: "#22c55e"
+        },
+
+        {
+            name: "Guild League",
+            time: "22:00 - 22:25",
+            color: "#8b5cf6"
+        }
+
+    ],
+
+    friday: [],
+
+    saturday: [],
+
+    sunday: [
+
+        {
+            name: "Polarity Zone",
+            time: "20:00",
+            color: "#ec4899",
+            editable: true
+        },
+
+        {
+            name: "ศึกชิงปราสาท",
+            time: "21:00 - 22:00",
+            color: "#ef4444"
+        }
+
+    ]
+
+};
+
+
+const DEFAULT_DATA = {
+
+    members: [
+
+        {
+            id: "m-1",
+            name: "BabySlayer",
+            class: "Assassin",
+            note: "สายคริ"
+        },
+
+        {
+            id: "m-2",
+            name: "HolyHeal",
+            class: "Priest",
+            note: "Support"
+        },
+
+        {
+            id: "m-3",
+            name: "TankGod",
+            class: "Paladin",
+            note: "Tank"
+        }
+
+    ],
+
+    groups: [
+
+        {
+            id: "group-1",
+            name: "Group 1",
+            color: "#8b5cf6",
+
+            parties: [
+
+                {
+                    id: "party-1",
+                    name: "Party 1",
+                    members: []
+                },
+
+                {
+                    id: "party-2",
+                    name: "Party 2",
+                    members: []
+                }
+
+            ]
+
+        }
+
+    ],
+
+    events: DEFAULT_EVENTS,
+
+    attendance: {}
+
+};
+
+
+/* ============================================================
+   APP STATE
+============================================================ */
+
+let guildData = null;
+
+let activeTab = "guildLeague";
+
+let sheetImporting = false;
+
+
+/* ============================================================
+   HELPER
+============================================================ */
+
+function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
+
+function todayBangkok() {
+
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: "Asia/Bangkok",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }
+    ).format(new Date());
+
+}
+
+
+function bangkokWeekday() {
+
+    return new Intl.DateTimeFormat(
+        "en-US",
+        {
+            timeZone: "Asia/Bangkok",
+            weekday: "long"
+        }
+    ).format(new Date()).toLowerCase();
+
+}
+
+
+function updateClock() {
+
+    const text =
+        new Intl.DateTimeFormat(
+            "th-TH",
+            {
+                timeZone: "Asia/Bangkok",
+                dateStyle: "medium",
+                timeStyle: "medium"
+            }
+        ).format(new Date());
+
+    document.getElementById("bangkok-clock").innerHTML =
+        `<i class="fa-regular fa-clock mr-1"></i> Bangkok: ${text}`;
+
+}
+
+
+/* ============================================================
+   CLASS ICON
+============================================================ */
+
+const CLASS_ICON = {
+
+    Assassin: "fa-mask",
+    Monk: "fa-hand-fist",
+    Priest: "fa-cross",
+    Paladin: "fa-shield-halved",
+    Knight: "fa-khanda",
+    Gunslinger: "fa-gun",
+    Wizard: "fa-wand-magic-sparkles",
+    Archer: "fa-bullseye",
+    Druid: "fa-leaf",
+    Sage: "fa-book",
+    Blacksmith: "fa-hammer",
+    Alchemist: "fa-flask",
+    Bard: "fa-guitar",
+    Dancer: "fa-music",
+    "Star Gladiator": "fa-star",
+    "Soul Linker": "fa-ghost"
+
+};
+
+
+function classColor(cls) {
+
+    const colors = {
+
+        Assassin: "#a855f7",
+        Monk: "#f59e0b",
+        Priest: "#38bdf8",
+        Paladin: "#facc15",
+        Knight: "#ef4444",
+        Gunslinger: "#94a3b8",
+        Wizard: "#6366f1",
+        Archer: "#34d399",
+        Druid: "#4ade80",
+        Sage: "#22d3ee",
+        Blacksmith: "#fb923c",
+        Alchemist: "#f472b6",
+        Bard: "#a3e635",
+        Dancer: "#fb7185",
+        "Star Gladiator": "#fde047",
+        "Soul Linker": "#2dd4bf"
+
+    };
+
+    return colors[cls] || "#64748b";
+
+}
+
+
+function getClassLogo(member) {
+
+    const icon =
+        CLASS_ICON[member.class] || "fa-user";
+
+    const color =
+        classColor(member.class);
+
+    return `
+        <div
+            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white"
+            style="background:${color};">
+            <i class="fa-solid ${icon}"></i>
+        </div>
+    `;
+
+}
+
+
+/* ============================================================
+   FIREBASE LOAD
+============================================================ */
+
+function startFirebase() {
+
+    onValue(
+        DATA_REF,
+        snapshot => {
+
+            const value = snapshot.val();
+
+            if (!value) {
+
+                guildData = clone(DEFAULT_DATA);
+
+                set(DATA_REF, guildData)
+                    .catch(err => console.error(err));
+
+            } else {
+
+                guildData = normalizeData(value);
+
+            }
+
+            document.getElementById(
+                "connection-status"
+            ).innerHTML = `
+                <span class="text-green-400">
+                    <i class="fa-solid fa-circle"></i>
+                    Firebase Connected
+                </span>
+                <span class="text-slate-500 ml-2">
+                    ข้อมูลถูกซิงก์ realtime
+                </span>
+            `;
+
+            renderApp();
+
+        },
+
+        error => {
+
+            console.error(error);
+
+            document.getElementById(
+                "connection-status"
+            ).innerHTML = `
+                <span class="text-red-400">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Firebase Error
+                </span>
+                <span class="text-slate-500 ml-2">
+                    ${escapeHTML(error.message)}
+                </span>
+            `;
+
+        }
+    );
+
+}
+
+
+function normalizeData(data) {
+
+    const result = clone(DEFAULT_DATA);
+
+    Object.assign(result, data);
+
+    result.members =
+        Array.isArray(data.members)
+            ? data.members
+            : Object.values(data.members || {});
+
+    result.groups =
+        Array.isArray(data.groups)
+            ? data.groups
+            : Object.values(data.groups || {});
+
+    result.groups.forEach(group => {
+
+        if (!Array.isArray(group.parties)) {
+
+            group.parties =
+                Object.values(group.parties || {});
+
+        }
+
+        group.parties.forEach(party => {
+
+            if (!Array.isArray(party.members)) {
+
+                party.members =
+                    Object.values(party.members || {});
+
+            }
+
+        });
+
+    });
+
+    result.attendance = data.attendance || {};
+
+    result.events =
+        data.events || clone(DEFAULT_EVENTS);
+
+    return result;
+
+}
+
+
+/* ============================================================
+   SAVE FIREBASE
+============================================================ */
+
+async function saveData() {
+
+    if (!guildData) return;
+
+    try {
+
+        await set(DATA_REF, guildData);
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "บันทึก Firebase ไม่สำเร็จ\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   EVENTS CALENDAR
+============================================================ */
+
+const WEEKDAYS = [
+
+    ["monday", "Mon", "จันทร์"],
+    ["tuesday", "Tue", "อังคาร"],
+    ["wednesday", "Wed", "พุธ"],
+    ["thursday", "Thu", "พฤหัส"],
+    ["friday", "Fri", "ศุกร์"],
+    ["saturday", "Sat", "เสาร์"],
+    ["sunday", "Sun", "อาทิตย์"]
+
+];
+
+
+function renderEventsCalendar() {
+
+    const container =
+        document.getElementById("events-calendar");
+
+    const today =
+        bangkokWeekday();
+
+    let html = "";
+
+    WEEKDAYS.forEach(([key, eng, thai]) => {
+
+        const isToday =
+            key === today;
+
+        const events =
+            guildData?.events?.[key] || [];
+
+        html += `
+
+            <div
+                class="
+                    rounded-xl
+                    border
+                    p-3
+                    min-h-[115px]
+                    ${isToday
+                        ? "today-card border-green-500 bg-green-950/20"
+                        : "border-slate-800 bg-slate-900/70"}
+                "
+            >
+
+                <div class="flex items-center gap-2 mb-2">
+
+                    <span
+                        class="
+                            w-2.5 h-2.5 rounded-full shrink-0
+                            ${isToday
+                                ? "bg-green-400 shadow-[0_0_10px_#22c55e]"
+                                : "bg-slate-700"}
+                        ">
+                    </span>
+
+                    <div>
+                        <div class="font-bold text-xs">
+                            ${eng}
+                        </div>
+
+                        <div class="text-[10px] text-slate-500">
+                            ${thai}
+                        </div>
+                    </div>
+
+                </div>
+        `;
+
+        if (!events.length) {
+
+            html += `
+                <div class="text-[10px] text-slate-600">
+                    ไม่มี Guild Event
+                </div>
+            `;
+
+        } else {
+
+            events.forEach(event => {
+
+                html += `
+                    <div
+                        class="mb-1.5 last:mb-0 rounded-lg bg-slate-800/70 px-2 py-1.5"
+                        style="border-left:3px solid ${event.color || "#8b5cf6"}"
+                    >
+
+                        <div class="text-[10px] font-semibold">
+                            ${escapeHTML(event.name)}
+                        </div>
+
+                        <div class="text-[10px] text-slate-400">
+                            ${escapeHTML(event.time)}
+                        </div>
+
+                    </div>
+                `;
+
+            });
+
+        }
+
+        html += `</div>`;
+
+    });
+
+    container.innerHTML = html;
+
+}
+
+
+/* ============================================================
+   EDIT POLARITY
+============================================================ */
+
+window.editPolarityTime = async function() {
+
+    const current =
+        guildData.events.sunday.find(
+            e => e.name === "Polarity Zone"
+        );
+
+    const time =
+        prompt(
+            "เวลา Polarity Zone\nตัวอย่าง 20:00 หรือ 20:30",
+            current?.time || "20:00"
+        );
+
+    if (!time) return;
+
+    if (current) {
+
+        current.time = time;
+
+    } else {
+
+        guildData.events.sunday.unshift({
+
+            name: "Polarity Zone",
+            time,
+            color: "#ec4899",
+            editable: true
+
+        });
+
+    }
+
+    await saveData();
+
+};
+
+
+/* ============================================================
+   TAB
+============================================================ */
+
+window.switchTab = function(tab) {
+
+    activeTab = tab;
+
+    document
+        .querySelectorAll(".tab-btn")
+        .forEach(btn => {
+            btn.classList.remove("tab-active");
+        });
+
+    document
+        .getElementById("tab-" + tab)
+        .classList.add("tab-active");
+
+
+    const activity =
+        document.getElementById("activity-view");
+
+    const attendance =
+        document.getElementById("attendance-view");
+
+
+    if (tab === "attendance") {
+
+        activity.classList.add("hidden");
+        attendance.classList.remove("hidden");
+
+        renderAttendance();
+
+    } else {
+
+        attendance.classList.add("hidden");
+        activity.classList.remove("hidden");
+
+        renderActivity();
+
+    }
+
+};
+
+
+/* ============================================================
+   ACTIVITY TITLE
+============================================================ */
+
+function activityInfo() {
+
+    const data = {
+
+        guildLeague: {
+
+            title: "Guild League",
+            icon: "fa-swords",
+            color: "text-purple-400",
+            description:
+                "จัด Party สำหรับ Guild League และเลือกสนามหลัก / สนามรองตอนลากสมาชิกเข้า"
+
+        },
+
+        polarityZone: {
+
+            title: "Polarity Zone",
+            icon: "fa-bolt",
+            color: "text-pink-400",
+            description:
+                "จัดกำลังสมาชิกสำหรับ Polarity Zone"
+
+        },
+
+        castleSiege: {
+
+            title: "Castle Siege",
+            icon: "fa-chess-rook",
+            color: "text-red-400",
+            description:
+                "จัดกำลังสมาชิกสำหรับศึกชิงปราสาท"
+
+        }
+
+    };
+
+    return data[activeTab];
+
+}
+
+
+/* ============================================================
+   ACTIVITY RENDER
+============================================================ */
+
+function renderActivity() {
+
+    if (activeTab === "attendance") return;
+
+    const info =
+        activityInfo();
+
+    document.getElementById(
+        "activity-title"
+    ).innerHTML = `
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+
+            <div class="flex items-center gap-2">
+
+                <i class="fa-solid ${info.icon} ${info.color}"></i>
+
+                <h2 class="font-bold">
+                    ${info.title}
+                </h2>
+
+            </div>
+
+            <p class="text-xs text-slate-500 mt-1">
+                ${info.description}
+            </p>
+
+        </div>
+    `;
+
+
+    renderPool();
+    renderGroups();
+
+}
+
+
+/* ============================================================
+   MEMBER FIND
+============================================================ */
+
+function findMember(memberId) {
+
+    return guildData.members.find(
+        m => m.id === memberId
+    );
+
+}
+
+
+function isMemberAssigned(memberId) {
+
+    for (const group of guildData.groups) {
+
+        for (const party of group.parties) {
+
+            if (
+                party.members.some(
+                    m => m.id === memberId
+                )
+            ) {
+                return true;
+            }
+
+        }
+
+    }
+
+    return false;
+
+}
+
+
+/* ============================================================
+   MEMBER CARD
+============================================================ */
+
+function memberCard(member, sourceId) {
+
+    const isGuildLeague =
+        activeTab === "guildLeague";
+
+    const field =
+        member.guildLeagueField || "main";
+
+
+    return `
+
+        <div
+            draggable="true"
+            ondragstart="handleDragStart(event,'${member.id}','${sourceId}')"
+            class="
+                member-card
+                bg-slate-950
+                border border-slate-800
+                rounded-xl
+                p-2.5
+                mb-2
+                cursor-grab
+            "
+        >
+
+            <div class="flex items-center gap-2">
+
+                ${getClassLogo(member)}
+
+                <div class="min-w-0 flex-1">
+
+                    <div class="font-semibold text-xs truncate">
+                        ${escapeHTML(member.name)}
+                    </div>
+
+                    <div class="text-[10px] text-slate-500 truncate">
+                        ${escapeHTML(member.class)}
+                        ${member.note
+                            ? " • " + escapeHTML(member.note)
+                            : ""}
+                    </div>
+
+                </div>
+
+                <div class="flex gap-1">
+
+                    <button
+                        onclick="openEditMember('${member.id}')"
+                        class="text-slate-500 hover:text-blue-400 p-1"
+                        title="แก้ไข">
+                        <i class="fa-solid fa-pen text-[10px]"></i>
+                    </button>
+
+                    <button
+                        onclick="deleteMember('${member.id}')"
+                        class="text-slate-500 hover:text-red-400 p-1"
+                        title="ลบ">
+                        <i class="fa-solid fa-trash text-[10px]"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            ${
+                isGuildLeague
+                ? `
+
+                <div class="mt-2 pt-2 border-t border-slate-800">
+
+                    <div class="text-[9px] text-slate-500 mb-1">
+                        Guild League Field
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-1">
+
+                        <button
+                            onclick="setGuildLeagueField('${member.id}','main')"
+                            class="
+                                text-[10px]
+                                px-2 py-1
+                                rounded
+                                ${field === "main"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-800 text-slate-500"}
+                            "
+                        >
+                            สนามหลัก
+                        </button>
+
+                        <button
+                            onclick="setGuildLeagueField('${member.id}','secondary')"
+                            class="
+                                text-[10px]
+                                px-2 py-1
+                                rounded
+                                ${field === "secondary"
+                                    ? "bg-orange-600 text-white"
+                                    : "bg-slate-800 text-slate-500"}
+                            "
+                        >
+                            สนามรอง
+                        </button>
+
+                    </div>
+
+                </div>
+
+                `
+                : ""
+            }
+
+        </div>
+    `;
+
+}
+
+
+/* ============================================================
+   POOL
+============================================================ */
+
+function renderPool() {
+
+    const pool =
+        document.getElementById("unassigned-pool");
+
+    const assignedIds =
+        new Set();
+
+    guildData.groups.forEach(group => {
+
+        group.parties.forEach(party => {
+
+            party.members.forEach(member => {
+
+                assignedIds.add(member.id);
+
+            });
+
+        });
+
+    });
+
+
+    const members =
+        guildData.members.filter(
+            member => !assignedIds.has(member.id)
+        );
+
+
+    document.getElementById(
+        "pool-count"
+    ).innerText = members.length;
+
+
+    if (!members.length) {
+
+        pool.innerHTML = `
+            <div class="text-center text-xs text-slate-600 py-10">
+                สมาชิกทั้งหมดถูกจัด Party แล้ว
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    pool.innerHTML =
+        members.map(
+            member => memberCard(member,"pool")
+        ).join("");
+
+}
+
+
+/* ============================================================
+   GROUPS
+============================================================ */
+
+function renderGroups() {
+
+    const container =
+        document.getElementById("groups-container");
+
+    let html = "";
+
+
+    guildData.groups.forEach(
+        (group, groupIndex) => {
+
+            html += `
+
+                <div
+                    class="bg-slate-900 border border-slate-800 rounded-2xl p-4"
+                >
+
+                    <div class="flex flex-wrap justify-between gap-3 items-center mb-4 pb-3 border-b border-slate-800">
+
+                        <div class="flex items-center gap-2">
+
+                            <span
+                                class="w-3 h-3 rounded-full"
+                                style="background:${group.color || "#8b5cf6"}">
+                            </span>
+
+                            <input
+                                value="${escapeHTML(group.name)}"
+                                onchange="updateGroupName('${group.id}',this.value)"
+                                class="
+                                    bg-transparent
+                                    font-bold
+                                    text-lg
+                                    border-b border-transparent
+                                    focus:border-purple-500
+                                    outline-none
+                                "
+                            >
+
+                        </div>
+
+
+                        <div class="flex gap-2">
+
+                            <button
+                                onclick="addPartyToGroup('${group.id}')"
+                                class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                            >
+                                <i class="fa-solid fa-plus"></i>
+                                Party
+                            </button>
+
+                            <button
+                                onclick="deleteGroup('${group.id}')"
+                                class="text-xs text-red-400 hover:text-red-300 px-2"
+                            >
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            `;
+
+
+            group.parties.forEach(
+                (party, partyIndex) => {
+
+                    html += `
+
+                        <div
+                            class="bg-slate-950/60 border border-slate-800 rounded-xl p-3"
+                        >
+
+                            <div class="flex items-center justify-between mb-3">
+
+                                <div class="flex items-center gap-1">
+
+                                    <button
+                                        onclick="moveParty('${group.id}','${party.id}',-1)"
+                                        class="text-slate-600 hover:text-white"
+                                    >
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+
+                                    <input
+                                        value="${escapeHTML(party.name)}"
+                                        onchange="updatePartyName('${group.id}','${party.id}',this.value)"
+                                        class="bg-transparent text-sm font-semibold border-b border-transparent focus:border-purple-500 outline-none w-28"
+                                    >
+
+                                    <button
+                                        onclick="moveParty('${group.id}','${party.id}',1)"
+                                        class="text-slate-600 hover:text-white"
+                                    >
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+
+                                </div>
+
+
+                                <div class="flex items-center gap-2">
+
+                                    <span class="text-[10px] text-slate-500">
+                                        ${party.members.length}/5
+                                    </span>
+
+                                    <button
+                                        onclick="deleteParty('${group.id}','${party.id}')"
+                                        class="text-slate-600 hover:text-red-400"
+                                    >
+                                        <i class="fa-solid fa-trash text-[10px]"></i>
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+
+                            <div
+                                class="min-h-[280px]"
+                                ondragover="allowDrop(event)"
+                                ondragleave="removeDragOver(event)"
+                                ondrop="dropToParty(event,'${party.id}')"
+                            >
+                    `;
+
+
+                    for (
+                        let slot = 0;
+                        slot < 5;
+                        slot++
+                    ) {
+
+                        const member =
+                            party.members[slot];
+
+
+                        if (member) {
+
+                            html +=
+                                memberCard(
+                                    member,
+                                    party.id
+                                );
+
+                        } else {
+
+                            html += `
+
+                                <div
+                                    class="
+                                        h-[64px]
+                                        mb-2
+                                        rounded-xl
+                                        border
+                                        border-dashed
+                                        border-slate-800
+                                        flex
+                                        items-center
+                                        justify-center
+                                        text-[10px]
+                                        text-slate-700
+                                    "
+                                >
+                                    Slot ${slot + 1}
+                                </div>
+
+                            `;
+
+                        }
+
+                    }
+
+
+                    html += `
+                            </div>
+
+                        </div>
+                    `;
+
+                }
+            );
+
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+        }
+    );
+
+
+    if (!guildData.groups.length) {
+
+        html = `
+            <div class="text-center py-20 bg-slate-900 border border-slate-800 rounded-2xl text-slate-500">
+                ยังไม่มี Group
+            </div>
+        `;
+
+    }
+
+
+    container.innerHTML = html;
+
+}
+
+
+/* ============================================================
+   DRAG & DROP
+============================================================ */
+
+window.handleDragStart = function(
+    event,
+    memberId,
+    sourceId
+) {
+
+    event.dataTransfer.setData(
+        "text/plain",
+        JSON.stringify({
+            memberId,
+            sourceId
+        })
+    );
+
+};
+
+
+window.allowDrop = function(event) {
+
+    event.preventDefault();
+
+    event.currentTarget.classList.add(
+        "drag-over"
+    );
+
+};
+
+
+window.removeDragOver = function(event) {
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+};
+
+
+window.dropToPool = async function(event) {
+
+    event.preventDefault();
+
+    removeDragOver(event);
+
+    const data =
+        JSON.parse(
+            event.dataTransfer.getData("text/plain")
+        );
+
+    removeMemberFromAllParties(
+        data.memberId
+    );
+
+    await saveData();
+
+};
+
+
+window.dropToParty = async function(
+    event,
+    targetPartyId
+) {
+
+    event.preventDefault();
+
+    removeDragOver(event);
+
+    const data =
+        JSON.parse(
+            event.dataTransfer.getData("text/plain")
+        );
+
+
+    const target =
+        findParty(targetPartyId);
+
+    if (!target) return;
+
+
+    if (
+        target.members.length >= 5 &&
+        data.sourceId !== targetPartyId
+    ) {
+
+        alert("Party นี้เต็มแล้ว 5/5");
+
+        return;
+
+    }
+
+
+    const member =
+        findMember(data.memberId);
+
+    if (!member) return;
+
+
+    removeMemberFromAllParties(
+        data.memberId
+    );
+
+
+    target.members.push(
+        clone(member)
+    );
+
+
+    await saveData();
+
+};
+
+
+/* ============================================================
+   PARTY HELPERS
+============================================================ */
+
+function findParty(partyId) {
+
+    for (const group of guildData.groups) {
+
+        const party =
+            group.parties.find(
+                p => p.id === partyId
+            );
+
+        if (party) return party;
+
+    }
+
+    return null;
+
+}
+
+
+function removeMemberFromAllParties(
+    memberId
+) {
+
+    guildData.groups.forEach(group => {
+
+        group.parties.forEach(party => {
+
+            party.members =
+                party.members.filter(
+                    m => m.id !== memberId
+                );
+
+        });
+
+    });
+
+}
+
+
+/* ============================================================
+   GUILD LEAGUE FIELD
+============================================================ */
+
+window.setGuildLeagueField = async function(
+    memberId,
+    field
+) {
+
+    const member =
+        findMember(memberId);
+
+    if (!member) return;
+
+    member.guildLeagueField =
+        field;
+
+    guildData.groups.forEach(group => {
+
+        group.parties.forEach(party => {
+
+            party.members.forEach(m => {
+
+                if (m.id === memberId) {
+
+                    m.guildLeagueField =
+                        field;
+
+                }
+
+            });
+
+        });
+
+    });
+
+    await saveData();
+
+};
+
+
+/* ============================================================
+   GROUP CRUD
+============================================================ */
+
+window.openGroupModal = function() {
+
+    document
+        .getElementById("group-modal")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("group-modal")
+        .classList.add("flex");
+
+};
+
+
+window.closeGroupModal = function() {
+
+    document
+        .getElementById("group-modal")
+        .classList.add("hidden");
+
+    document
+        .getElementById("group-modal")
+        .classList.remove("flex");
+
+};
+
+
+window.handleGroupSubmit = async function(event) {
+
+    event.preventDefault();
+
+    const name =
+        document.getElementById(
+            "group-name"
+        ).value.trim();
+
+    const color =
+        document.getElementById(
+            "group-color"
+        ).value;
+
+
+    guildData.groups.push({
+
+        id: "group-" + Date.now(),
+
+        name,
+
+        color,
+
+        parties: [
+
+            {
+                id: "party-" + Date.now(),
+
+                name: "Party 1",
+
+                members: []
+
+            }
+
+        ]
+
+    });
+
+
+    await saveData();
+
+    closeGroupModal();
+
+};
+
+
+window.updateGroupName = async function(
+    groupId,
+    name
+) {
+
+    const group =
+        guildData.groups.find(
+            g => g.id === groupId
+        );
+
+    if (!group) return;
+
+    group.name =
+        name.trim() || group.name;
+
+    await saveData();
+
+};
+
+
+window.deleteGroup = async function(
+    groupId
+) {
+
+    if (
+        !confirm(
+            "ลบ Group นี้ใช่หรือไม่?\nสมาชิกจะกลับเข้าคลัง"
+        )
+    ) return;
+
+
+    guildData.groups =
+        guildData.groups.filter(
+            g => g.id !== groupId
+        );
+
+
+    await saveData();
+
+};
+
+
+window.addPartyToGroup = async function(
+    groupId
+) {
+
+    const group =
+        guildData.groups.find(
+            g => g.id === groupId
+        );
+
+    if (!group) return;
+
+
+    group.parties.push({
+
+        id: "party-" + Date.now(),
+
+        name:
+            "Party " +
+            (group.parties.length + 1),
+
+        members: []
+
+    });
+
+
+    await saveData();
+
+};
+
+
+window.deleteParty = async function(
+    groupId,
+    partyId
+) {
+
+    const group =
+        guildData.groups.find(
+            g => g.id === groupId
+        );
+
+    if (!group) return;
+
+
+    if (group.parties.length <= 1) {
+
+        alert(
+            "Group ต้องมีอย่างน้อย 1 Party"
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !confirm(
+            "ลบ Party นี้ใช่หรือไม่?"
+        )
+    ) return;
+
+
+    group.parties =
+        group.parties.filter(
+            p => p.id !== partyId
+        );
+
+
+    await saveData();
+
+};
+
+
+window.moveParty = async function(
+    groupId,
+    partyId,
+    direction
+) {
+
+    const group =
+        guildData.groups.find(
+            g => g.id === groupId
+        );
+
+    if (!group) return;
+
+
+    const index =
+        group.parties.findIndex(
+            p => p.id === partyId
+        );
+
+
+    const next =
+        index + direction;
+
+
+    if (
+        index < 0 ||
+        next < 0 ||
+        next >= group.parties.length
+    ) return;
+
+
+    [
+        group.parties[index],
+        group.parties[next]
+    ] =
+    [
+        group.parties[next],
+        group.parties[index]
+    ];
+
+
+    await saveData();
+
+};
+
+
+window.updatePartyName = async function(
+    groupId,
+    partyId,
+    name
+) {
+
+    const group =
+        guildData.groups.find(
+            g => g.id === groupId
+        );
+
+    const party =
+        group?.parties.find(
+            p => p.id === partyId
+        );
+
+    if (!party) return;
+
+    party.name =
+        name.trim() || party.name;
+
+    await saveData();
+
+};
+
+
+/* ============================================================
+   MEMBER CRUD
+============================================================ */
+
+window.openMemberModal = function() {
+
+    document
+        .getElementById("member-modal")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("member-modal")
+        .classList.add("flex");
+
+    document
+        .getElementById("member-form")
+        ?.reset();
+
+    document.getElementById(
+        "edit-member-id"
+    ).value = "";
+
+    document.getElementById(
+        "member-modal-title"
+    ).innerText = "เพิ่มสมาชิก";
+
+};
+
+
+window.closeMemberModal = function() {
+
+    document
+        .getElementById("member-modal")
+        .classList.add("hidden");
+
+    document
+        .getElementById("member-modal")
+        .classList.remove("flex");
+
+};
+
+
+window.openEditMember = function(
+    memberId
+) {
+
+    const member =
+        findMember(memberId);
+
+    if (!member) return;
+
+
+    document
+        .getElementById("member-modal")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("member-modal")
+        .classList.add("flex");
+
+
+    document.getElementById(
+        "member-modal-title"
+    ).innerText =
+        "แก้ไขสมาชิก";
+
+
+    document.getElementById(
+        "edit-member-id"
+    ).value =
+        member.id;
+
+
+    document.getElementById(
+        "char-name"
+    ).value =
+        member.name;
+
+
+    document.getElementById(
+        "char-class"
+    ).value =
+        member.class;
+
+
+    document.getElementById(
+        "char-note"
+    ).value =
+        member.note || "";
+
+};
+
+
+window.handleMemberSubmit = async function(
+    event
+) {
+
+    event.preventDefault();
+
+
+    const id =
+        document.getElementById(
+            "edit-member-id"
+        ).value;
+
+
+    const name =
+        document.getElementById(
+            "char-name"
+        ).value.trim();
+
+
+    const cls =
+        document.getElementById(
+            "char-class"
+        ).value;
+
+
+    const note =
+        document.getElementById(
+            "char-note"
+        ).value.trim();
+
+
+    if (id) {
+
+        const member =
+            findMember(id);
+
+        if (member) {
+
+            member.name = name;
+            member.class = cls;
+            member.note = note;
+
+        }
+
+
+        guildData.groups.forEach(group => {
+
+            group.parties.forEach(party => {
+
+                party.members.forEach(m => {
+
+                    if (m.id === id) {
+
+                        m.name = name;
+                        m.class = cls;
+                        m.note = note;
+
+                    }
+
+                });
+
+            });
+
+        });
+
+
+    } else {
+
+        guildData.members.push({
+
+            id: "m-" + Date.now(),
+
+            name,
+
+            class: cls,
+
+            note
+
+        });
+
+    }
+
+
+    await saveData();
+
+    closeMemberModal();
+
+};
+
+
+window.deleteMember = async function(
+    memberId
+) {
+
+    if (
+        !confirm(
+            "ลบสมาชิกนี้ออกจากระบบใช่หรือไม่?"
+        )
+    ) return;
+
+
+    guildData.members =
+        guildData.members.filter(
+            m => m.id !== memberId
+        );
+
+
+    removeMemberFromAllParties(
+        memberId
+    );
+
+
+    await saveData();
+
+};
+
+
+/* ============================================================
+   ATTENDANCE
+============================================================ */
+
+const STATUS = {
+
+    joined: {
+
+        label: "เข้าร่วม",
+        short: "มา",
+        color: "green",
+        icon: "fa-check"
+
+    },
+
+    absent: {
+
+        label: "ไม่เข้าร่วม",
+        short: "ไม่มา",
+        color: "red",
+        icon: "fa-xmark"
+
+    },
+
+    afk: {
+
+        label: "AFK / มีส่วนร่วมน้อย",
+        short: "AFK",
+        color: "yellow",
+        icon: "fa-hourglass-half"
+
+    }
+
+};
+
+
+function getAttendance(
+    date,
+    activity,
+    memberId
+) {
+
+    return (
+        guildData.attendance?.[date]?.[activity]?.[memberId]
+        || null
+    );
+
+}
+
+
+window.setAttendance = async function(
+    date,
+    activity,
+    memberId,
+    status
+) {
+
+    if (!guildData.attendance[date]) {
+
+        guildData.attendance[date] = {};
+
+    }
+
+
+    if (!guildData.attendance[date][activity]) {
+
+        guildData.attendance[date][activity] = {};
+
+    }
+
+
+    const current =
+        guildData.attendance[date][activity][memberId];
+
+
+    if (current === status) {
+
+        delete guildData.attendance[date][activity][memberId];
+
+    } else {
+
+        guildData.attendance[date][activity][memberId] =
+            status;
+
+    }
+
+
+    await saveData();
+
+    renderAttendance();
+
+};
+
+
+/* ============================================================
+   ATTENDANCE RENDER
+============================================================ */
+
+window.renderAttendance = function() {
+
+    if (!guildData) return;
+
+
+    const date =
+        document.getElementById(
+            "attendance-date"
+        ).value ||
+        todayBangkok();
+
+
+    const activity =
+        document.getElementById(
+            "attendance-activity"
+        ).value;
+
+
+    const records =
+        guildData.attendance?.[date]?.[activity] || {};
+
+
+    let joined = 0;
+    let absent = 0;
+    let afk = 0;
+
+
+    guildData.members.forEach(member => {
+
+        const status =
+            records[member.id];
+
+        if (status === "joined") joined++;
+
+        if (status === "absent") absent++;
+
+        if (status === "afk") afk++;
+
+    });
+
+
+    const total =
+        guildData.members.length;
+
+
+    const unmarked =
+        Math.max(
+            0,
+            total - joined - absent - afk
+        );
+
+
+    document.getElementById(
+        "attendance-summary"
+    ).innerHTML = `
+
+        <div class="bg-green-950/30 border border-green-900 rounded-xl p-4">
+
+            <div class="text-xs text-green-400">
+                เข้าร่วม
+            </div>
+
+            <div class="text-2xl font-bold mt-1">
+                ${joined}
+            </div>
+
+        </div>
+
+
+        <div class="bg-red-950/30 border border-red-900 rounded-xl p-4">
+
+            <div class="text-xs text-red-400">
+                ไม่เข้าร่วม
+            </div>
+
+            <div class="text-2xl font-bold mt-1">
+                ${absent}
+            </div>
+
+        </div>
+
+
+        <div class="bg-yellow-950/30 border border-yellow-900 rounded-xl p-4">
+
+            <div class="text-xs text-yellow-400">
+                AFK / มีส่วนร่วมน้อย
+            </div>
+
+            <div class="text-2xl font-bold mt-1">
+                ${afk}
+            </div>
+
+        </div>
+
+
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+
+            <div class="text-xs text-slate-400">
+                ยังไม่ระบุ
+            </div>
+
+            <div class="text-2xl font-bold mt-1">
+                ${unmarked}
+            </div>
+
+        </div>
+
+    `;
+
+
+    let html = "";
+
+
+    guildData.members.forEach(member => {
+
+        const status =
+            records[member.id] || "";
+
+
+        html += `
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+
+                    <div class="flex items-center gap-3">
+
+                        ${getClassLogo(member)}
+
+                        <div>
+
+                            <div class="font-semibold text-sm">
+                                ${escapeHTML(member.name)}
+                            </div>
+
+                            <div class="text-[10px] text-slate-500">
+                                ${escapeHTML(member.class)}
+                                ${member.note
+                                    ? " • " + escapeHTML(member.note)
+                                    : ""}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="grid grid-cols-3 gap-1.5 w-full lg:w-auto">
+
+                        ${attendanceButton(
+                            date,
+                            activity,
+                            member.id,
+                            "joined",
+                            status
+                        )}
+
+                        ${attendanceButton(
+                            date,
+                            activity,
+                            member.id,
+                            "absent",
+                            status
+                        )}
+
+                        ${attendanceButton(
+                            date,
+                            activity,
+                            member.id,
+                            "afk",
+                            status
+                        )}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    });
+
+
+    if (!guildData.members.length) {
+
+        html = `
+            <div class="text-center py-10 text-slate-600">
+                ยังไม่มีสมาชิก
+            </div>
+        `;
+
+    }
+
+
+    document.getElementById(
+        "attendance-list"
+    ).innerHTML = html;
+
+};
+
+
+function attendanceButton(
+    date,
+    activity,
+    memberId,
+    type,
+    current
+) {
+
+    const s =
+        STATUS[type];
+
+
+    const active =
+        current === type;
+
+
+    const activeClasses = {
+
+        green:
+            "bg-green-600 text-white border-green-500",
+
+        red:
+            "bg-red-600 text-white border-red-500",
+
+        yellow:
+            "bg-yellow-600 text-white border-yellow-500"
+
+    };
+
+
+    return `
+
+        <button
+            onclick="setAttendance('${date}','${activity}','${memberId}','${type}')"
+            class="
+                status-btn
+                border
+                rounded-lg
+                px-2.5
+                py-2
+                text-[10px]
+                font-medium
+                ${active
+                    ? activeClasses[s.color]
+                    : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-200"}
+            "
+        >
+
+            <i class="fa-solid ${s.icon} mr-1"></i>
+            ${s.short}
+
+        </button>
+
+    `;
+
+}
+
+
+/* ============================================================
+   GOOGLE SHEET IMPORT
+============================================================ */
+
+/*
+    วิธีทำงาน:
+
+    Google Sheet
+        ↓
+    Apps Script Web App
+        ↓
+    JSONP
+        ↓
+    Firebase members
+        ↓
+    เว็บ
+
+*/
+
+window.importFromGoogleSheet = function() {
+
+    if (!GOOGLE_SHEET_WEBAPP_URL) {
+
+        alert(
+            "ยังไม่ได้ใส่ Google Sheet Web App URL\n\n" +
+            "ให้แก้ตัวแปร GOOGLE_SHEET_WEBAPP_URL ในไฟล์นี้ก่อน"
+        );
+
+        return;
+
+    }
+
+
+    if (sheetImporting) return;
+
+    sheetImporting = true;
+
+
+    const callbackName =
+        "sheetCallback_" +
+        Date.now();
+
+
+    window[callbackName] =
+        async function(data) {
+
+            try {
+
+                if (
+                    !data ||
+                    !Array.isArray(data.members)
+                ) {
+
+                    throw new Error(
+                        "รูปแบบข้อมูล Google Sheet ไม่ถูกต้อง"
+                    );
+
+                }
+
+
+                let added = 0;
+                let updated = 0;
+
+
+                data.members.forEach(row => {
+
+                    if (!row.name) return;
+
+
+                    let member =
+                        guildData.members.find(
+                            m =>
+                                m.id === row.id ||
+                                (
+                                    m.name &&
+                                    m.name.toLowerCase() ===
+                                    String(row.name).toLowerCase()
+                                )
+                        );
+
+
+                    if (member) {
+
+                        member.name =
+                            row.name;
+
+                        member.class =
+                            row.class || member.class;
+
+                        member.note =
+                            row.note || "";
+
+                        updated++;
+
+                    } else {
+
+                        guildData.members.push({
+
+                            id:
+                                row.id ||
+                                "sheet-" + Date.now() + "-" + Math.random().toString(36).slice(2,7),
+
+                            name:
+                                row.name,
+
+                            class:
+                                row.class || "Assassin",
+
+                            note:
+                                row.note || ""
+
+                        });
+
+                        added++;
+
+                    }
+
+                });
+
+
+                await saveData();
+
+
+                alert(
+                    `Import สำเร็จ\n\nเพิ่มใหม่: ${added}\nอัปเดต: ${updated}`
+                );
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Import Google Sheet ไม่สำเร็จ\n\n" +
+                    error.message
+                );
+
+            } finally {
+
+                sheetImporting = false;
+
+                delete window[callbackName];
+
+            }
+
+        };
+
+
+    const script =
+        document.createElement("script");
+
+
+    const url =
+        GOOGLE_SHEET_WEBAPP_URL +
+        "?action=members" +
+        "&callback=" +
+        encodeURIComponent(callbackName) +
+        "&t=" +
+        Date.now();
+
+
+    script.src = url;
+
+
+    script.onerror = function() {
+
+        sheetImporting = false;
+
+        delete window[callbackName];
+
+        alert(
+            "เชื่อมต่อ Google Sheet ไม่สำเร็จ"
+        );
+
+    };
+
+
+    document.body.appendChild(script);
+
+};
+
+
+/* ============================================================
+   EXPORT IMAGE
+============================================================ */
+
+window.exportAllGroupsToSingleImage =
+async function() {
+
+    if (!guildData.groups.length) {
+
+        alert("ยังไม่มี Group");
+
+        return;
+
+    }
+
+
+    const el =
+        document.createElement("div");
+
+
+    el.style.position = "absolute";
+    el.style.left = "-99999px";
+    el.style.top = "0";
+    el.style.width = "1600px";
+    el.style.padding = "40px";
+    el.style.background = "#020617";
+    el.style.color = "#fff";
+    el.style.fontFamily = "'Prompt', sans-serif";
+
+
+    let html = `
+
+        <h1 style="font-size:28px;font-weight:700;margin-bottom:5px;">
+            Babymonster Guild Roster
+        </h1>
+
+        <div style="color:#94a3b8;margin-bottom:25px;">
+            ${activityInfo()?.title || "Guild"}
+        </div>
+
+    `;
+
+
+    guildData.groups.forEach(group => {
+
+        html += `
+
+            <div style="
+                background:#0f172a;
+                border:1px solid #334155;
+                border-radius:16px;
+                padding:18px;
+                margin-bottom:25px;
+            ">
+
+                <h2 style="
+                    font-size:18px;
+                    margin-bottom:15px;
+                ">
+                    <span style="
+                        display:inline-block;
+                        width:12px;
+                        height:12px;
+                        border-radius:50%;
+                        background:${group.color};
+                        margin-right:8px;
+                    "></span>
+
+                    ${escapeHTML(group.name)}
+                </h2>
+
+        `;
+
+
+        html += `
+            <table style="
+                width:100%;
+                border-collapse:collapse;
+            ">
+                <tr>
+                    <th style="padding:10px;border:1px solid #334155;">
+                        Party
+                    </th>
+                    <th style="padding:10px;border:1px solid #334155;">
+                        Slot
+                    </th>
+                    <th style="padding:10px;border:1px solid #334155;">
+                        Character
+                    </th>
+                    <th style="padding:10px;border:1px solid #334155;">
+                        Class
+                    </th>
+                    <th style="padding:10px;border:1px solid #334155;">
+                        Field
+                    </th>
+                </tr>
+        `;
+
+
+        group.parties.forEach(party => {
+
+            for (
+                let i = 0;
+                i < 5;
+                i++
+            ) {
+
+                const member =
+                    party.members[i];
+
+
+                html += `
+
+                    <tr>
+
+                        <td style="padding:9px;border:1px solid #334155;">
+                            ${escapeHTML(party.name)}
+                        </td>
+
+                        <td style="padding:9px;border:1px solid #334155;">
+                            ${i + 1}
+                        </td>
+
+                        <td style="padding:9px;border:1px solid #334155;">
+                            ${member
+                                ? escapeHTML(member.name)
+                                : "(ว่าง)"}
+                        </td>
+
+                        <td style="padding:9px;border:1px solid #334155;">
+                            ${member
+                                ? escapeHTML(member.class)
+                                : ""}
+                        </td>
+
+                        <td style="padding:9px;border:1px solid #334155;">
+                            ${
+                                member &&
+                                activeTab === "guildLeague"
+                                    ? (
+                                        member.guildLeagueField === "secondary"
+                                            ? "สนามรอง"
+                                            : "สนามหลัก"
+                                    )
+                                    : "-"
+                            }
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+
+        });
+
+
+        html += `
+            </table>
+            </div>
+        `;
+
+    });
+
+
+    el.innerHTML = html;
+
+    document.body.appendChild(el);
+
+
+    try {
+
+        const canvas =
+            await html2canvas(
+                el,
+                {
+                    backgroundColor: "#020617",
+                    scale: 2,
+                    useCORS: true
+                }
+            );
+
+
+        const link =
+            document.createElement("a");
+
+
+        link.download =
+            "Babymonster_" +
+            activeTab +
+            "_Roster.jpg";
+
+
+        link.href =
+            canvas.toDataURL(
+                "image/jpeg",
+                .95
+            );
+
+
+        link.click();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Export รูปไม่สำเร็จ"
+        );
+
+    }
+
+
+    document.body.removeChild(el);
+
+};
+
+
+/* ============================================================
+   RENDER APP
+============================================================ */
+
+function renderApp() {
+
+    renderEventsCalendar();
+
+    if (activeTab === "attendance") {
+
+        renderAttendance();
+
+    } else {
+
+        renderActivity();
+
+    }
+
+}
+
+
+/* ============================================================
+   INIT
+============================================================ */
+
+document.getElementById(
+    "attendance-date"
+).value =
+    todayBangkok();
+
+
+switchTab("guildLeague");
+
+updateClock();
+
+setInterval(
+    updateClock,
+    1000
+);
+
+setInterval(
+    renderEventsCalendar,
+    30000
+);
+
+startFirebase();
+
+
+/* ============================================================
+   ESC KEY MODALS
+============================================================ */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key !== "Escape") return;
+
+        closeMemberModal();
+        closeGroupModal();
+
+    }
+);
+
+</script>
+
+</body>
+</html>

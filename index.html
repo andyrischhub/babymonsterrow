@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babymonster Guild Party Manager - Firebase Realtime</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome สำหรับไอคอน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Prompt', sans-serif; }
+        .drag-over { background-color: rgba(59, 130, 246, 0.1); border: 2px dashed #3b82f6; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-purple-600 to-pink-500 p-2.5 rounded-xl shadow-md">
+                    <i class="fa-solid fa-shield-halved text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                        Babymonster Guild Manager
+                    </h1>
+                    <p class="text-xs text-slate-400">Ragnarok The New World - Realtime Sync</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Admin Action Buttons (Hidden by default) -->
+                <div id="admin-action-buttons" class="hidden flex flex-wrap gap-2 items-center">
+                    <button onclick="openGroupModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg font-medium text-sm transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i> เพิ่ม Group ใหญ่
+                    </button>
+                    <button onclick="openMemberModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg font-medium text-sm transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> เพิ่มสมาชิก
+                    </button>
+                    <button onclick="resetData()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-600/50 px-3 py-2 rounded-lg font-medium text-sm transition" title="รีเซ็ตข้อมูลทั้งหมด">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+
+                <!-- Login / Logout Button -->
+                <button id="auth-btn" onclick="toggleAdminLogin()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-medium text-sm transition border border-slate-600 flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-amber-400" id="auth-icon"></i> <span id="auth-text">เข้าสู่ระบบผู้ดูแล</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Guild Events Calendar Section -->
+    <section class="max-w-7xl mx-auto px-4 mt-6">
+        <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 shadow-xl backdrop-blur">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b border-slate-700 gap-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="bg-pink-600/20 p-2 rounded-lg text-pink-400 border border-pink-500/30">
+                        <i class="fa-solid fa-calendar-days text-base"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-slate-100 text-sm md:text-base">ตารางเวลากิจกรรมกิลด์ประจำสัปดาห์</h2>
+                        <p class="text-[11px] text-slate-400">เวลามาตรฐาน UTC+7 (Bangkok) • วงกลมสีเขียวแสดงถึงวันปัจจุบัน</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700/80">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="current-bkk-time" class="text-slate-300 font-medium">กำลังโหลดเวลา...</span>
+                </div>
+            </div>
+
+            <!-- 7 Days Grid -->
+            <div id="guild-calendar-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+                <!-- Rendered dynamically by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Activity Tabs Navigation -->
+    <div class="max-w-7xl mx-auto px-4 mt-6">
+        <div class="flex flex-wrap border-b border-slate-700 gap-2">
+            <button onclick="switchActivity('polarity')" id="tab-polarity" class="px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-400"></i> Polarity Zone
+            </button>
+            <button onclick="switchActivity('guild_league')" id="tab-guild_league" class="px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 flex items-center gap-2">
+                <i class="fa-solid fa-trophy text-sky-400"></i> Guild League
+            </button>
+            <button onclick="switchActivity('castle_siege')" id="tab-castle_siege" class="px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 flex items-center gap-2">
+                <i class="fa-solid fa-chess-rook text-rose-400"></i> ศึกชิงปราสาท
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Sidebar: Unassigned Members (Pool) -->
+        <aside class="lg:col-span-1 bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 flex flex-col h-[75vh] sticky top-24 shadow-xl">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-700">
+                <h2 class="font-bold text-slate-200 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-users text-purple-400"></i> คลังสมาชิก (ยังไม่จัดปาร์ตี้)
+                </h2>
+                <span id="unassigned-count" class="bg-slate-700 text-xs px-2.5 py-1 rounded-full text-purple-300 font-semibold">0</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">สมาชิกที่ยังไม่ได้ลงปาร์ตี้ในกิจกรรมนี้</p>
+            
+            <div id="unassigned-pool" 
+                 ondragover="allowDrop(event)" 
+                 ondragleave="removeDragOver(event)" 
+                 ondrop="dropToPool(event)" 
+                 class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[200px]">
+                <p class="text-slate-500 text-xs text-center py-4">กำลังเชื่อมต่อฐานข้อมูล...</p>
+            </div>
+        </aside>
+
+        <!-- Main Content: Groups & Parties -->
+        <section class="lg:col-span-3 space-y-6">
+            <div id="groups-container" class="space-y-6">
+                <!-- Groups Render Here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Member -->
+    <div id="member-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 id="member-modal-title" class="font-bold text-lg text-slate-100">เพิ่มรายชื่อสมาชิก</h3>
+                <button type="button" onclick="closeMemberModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="member-form" onsubmit="handleMemberSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-member-id">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">ชื่อตัวละคร (Character Name)</label>
+                    <input type="text" id="char-name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">อาชีพ (Class)</label>
+                    <select id="char-class" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-purple-500">
+                        <option value="Assassin">Assassin / Assassin Cross</option>
+                        <option value="Monk">Monk / Champion</option>
+                        <option value="Priest">Priest / High Priest</option>
+                        <option value="Paladin">Paladin / Crusader</option>
+                        <option value="Knight">Knight / Lord Knight</option>
+                        <option value="Gunslinger">Gunslinger</option>
+                        <option value="Wizard">Wizard / High Wizard</option>
+                        <option value="Archer">Archer / Hunter / Sniper</option>
+                        <option value="Druid">Druid</option>
+                        <option value="Sage">Sage / Scholar</option>
+                        <option value="Blacksmith">Blacksmith / Whitesmith</option>
+                        <option value="Alchemist">Alchemist / Creator</option>
+                        <option value="Bard">Bard / Clown</option>
+                        <option value="Dancer">Dancer / Gypsy</option>
+                        <option value="Star Gladiator">Star Gladiator</option>
+                        <option value="Soul Linker">Soul Linker</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">หมายเหตุ / บทบาท (เช่น Tank, DPS)</label>
+                    <input type="text" id="char-note" placeholder="เช่น สายบู๊, สายบัฟ" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeMemberModal()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Group -->
+    <div id="group-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="font-bold text-lg text-slate-100">เพิ่ม Group ใหญ่ใหม่ในกิจกรรมนี้</h3>
+                <button type="button" onclick="closeGroupModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleGroupSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">ชื่อกลุ่ม (เช่น Group 1, ทีม A)</label>
+                    <input type="text" id="group-name" required placeholder="Group 1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">สีประจำกลุ่ม</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="color" id="group-color" value="#8b5cf6" class="w-12 h-10 bg-slate-900 border border-slate-700 rounded cursor-pointer">
+                        <span class="text-xs text-slate-400">เลือกสีเพื่อจำแนกกลุ่ม</span>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeGroupModal()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">สร้างกลุ่ม</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // ใส่ Firebase Config ของคุณตรงนี้
+const firebaseConfig = {
+    apiKey: "AIzaSyAaj2QVO-Q-A8aUGX86vokzmbXfY_h3674",
+    authDomain: "row-management.firebaseapp.com",
+    databaseURL: "https://row-management-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "row-management",
+    storageBucket: "row-management.firebasestorage.app",
+    messagingSenderId: "544904098203",
+    appId: "1:544904098203:web:1fd1fe700045c953b6313e",
+    measurementId: "G-G3TG1YLDR9"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // State สำหรับควบคุมสิทธิ์ Admin (เก็บใน sessionStorage)
+        let isAdmin = sessionStorage.getItem('isAdminBBM') === 'true';
+
+        window.toggleAdminLogin = function() {
+            if (isAdmin) {
+                if (confirm("ต้องการออกจากระบบผู้ดูแลใช่หรือไม่?")) {
+                    isAdmin = false;
+                    sessionStorage.removeItem('isAdminBBM');
+                    renderApp();
+                }
+            } else {
+                const pwd = prompt("กรุณากรอกรหัสผ่านผู้ดูแล:");
+                if (pwd === "adminbbm") {
+                    isAdmin = true;
+                    sessionStorage.setItem('isAdminBBM', 'true');
+                    alert("เข้าสู่ระบบผู้ดูแลสำเร็จ!");
+                    renderApp();
+                } else if (pwd !== null) {
+                    alert("รหัสผ่านไม่ถูกต้อง!");
+                }
+            }
+        };
+
+        const classStyles = {
+            "Assassin": { icon: "fa-solid fa-mask", bg: "linear-gradient(135deg, #6b21a8, #a855f7)" },
+            "Monk": { icon: "fa-solid fa-hand-fist", bg: "linear-gradient(135deg, #d97706, #fbbf24)" },
+            "Priest": { icon: "fa-solid fa-cross", bg: "linear-gradient(135deg, #0284c7, #38bdf8)" },
+            "Paladin": { icon: "fa-solid fa-shield-halved", bg: "linear-gradient(135deg, #ca8a04, #facc15)" },
+            "Knight": { icon: "fa-solid fa-khanda", bg: "linear-gradient(135deg, #b91c1c, #ef4444)" },
+            "Gunslinger": { icon: "fa-solid fa-gun", bg: "linear-gradient(135deg, #475569, #94a3b8)" },
+            "Wizard": { icon: "fa-solid fa-wand-magic-sparkles", bg: "linear-gradient(135deg, #4338ca, #6366f1)" },
+            "Archer": { icon: "fa-solid fa-bullseye", bg: "linear-gradient(135deg, #047857, #34d399)" },
+            "Druid": { icon: "fa-solid fa-leaf", bg: "linear-gradient(135deg, #15803d, #4ade80)" },
+            "Sage": { icon: "fa-solid fa-book-journal-whills", bg: "linear-gradient(135deg, #0e7490, #22d3ee)" },
+            "Blacksmith": { icon: "fa-solid fa-hammer", bg: "linear-gradient(135deg, #c2410c, #fb923c)" },
+            "Alchemist": { icon: "fa-solid fa-flask", bg: "linear-gradient(135deg, #be185d, #f472b6)" },
+            "Bard": { icon: "fa-solid fa-guitar", bg: "linear-gradient(135deg, #65a30d, #a3e635)" },
+            "Dancer": { icon: "fa-solid fa-music", bg: "linear-gradient(135deg, #e11d48, #fb7185)" },
+            "Star Gladiator": { icon: "fa-solid fa-star", bg: "linear-gradient(135deg, #eab308, #fde047)" },
+            "Soul Linker": { icon: "fa-solid fa-ghost", bg: "linear-gradient(135deg, #0f766e, #2dd4bf)" },
+            "Default": { icon: "fa-solid fa-user", bg: "linear-gradient(135deg, #334155, #64748b)" }
+        };
+
+        function getClassLogoHTML(className) {
+            const style = classStyles[className] || classStyles["Default"];
+            return `
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm border border-white/10 shrink-0" style="background: ${style.bg};">
+                    <i class="${style.icon} text-sm"></i>
+                </div>
+            `;
+        }
+
+        let guildData = {
+            members: [
+                { id: "m-1", name: "BabySlayer", class: "Assassin", note: "สายคริ" },
+                { id: "m-2", name: "HolyHeal", class: "Priest", note: "สายซัพพอร์ต" },
+                { id: "m-3", name: "TankGod", class: "Paladin", note: "รับตีน" }
+            ],
+            settings: {
+                polarityTime: "20.00"
+            },
+            activities: {
+                "polarity": {
+                    name: "Polarity Zone",
+                    groups: [{ id: "group-p-1", name: "Group 1", color: "#8b5cf6", parties: [{ id: "party-p-1", name: "Party 1", members: [] }] }]
+                },
+                "guild_league": {
+                    name: "Guild League",
+                    groups: [{ id: "group-gl-1", name: "Group 1", color: "#0ea5e9", parties: [{ id: "party-gl-1", name: "Party 1", members: [] }] }]
+                },
+                "castle_siege": {
+                    name: "ศึกชิงปราสาท",
+                    groups: [{ id: "group-cs-1", name: "Group 1", color: "#ef4444", parties: [{ id: "party-cs-1", name: "Party 1", members: [] }] }]
+                }
+            },
+            currentActivity: "polarity"
+        };
+
+        function saveData() {
+            if (!isAdmin) return;
+            set(ref(db, 'guildData'), guildData)
+                .catch((error) => console.error("Error saving data: ", error));
+        }
+
+        window.resetData = function() {
+            if (!isAdmin) { alert("กรุณาเข้าสู่ระบบ Admin ก่อนใช้งาน"); return; }
+            if(confirm("คุณต้องการรีเซ็ตข้อมูลทั้งหมดใน Realtime Database ใช่หรือไม่?")) {
+                const defaultData = {
+                    members: [
+                        { id: "m-1", name: "BabySlayer", class: "Assassin", note: "สายคริ" },
+                        { id: "m-2", name: "HolyHeal", class: "Priest", note: "สายซัพพอร์ต" },
+                        { id: "m-3", name: "TankGod", class: "Paladin", note: "รับตีน" }
+                    ],
+                    settings: {
+                        polarityTime: "20.00"
+                    },
+                    activities: {
+                        "polarity": { name: "Polarity Zone", groups: [{ id: "group-p-1", name: "Group 1", color: "#8b5cf6", parties: [{ id: "party-p-1", name: "Party 1", members: [] }] }] },
+                        "guild_league": { name: "Guild League", groups: [{ id: "group-gl-1", name: "Group 1", color: "#0ea5e9", parties: [{ id: "party-gl-1", name: "Party 1", members: [] }] }] },
+                        "castle_siege": { name: "ศึกชิงปราสาท", groups: [{ id: "group-cs-1", name: "Group 1", color: "#ef4444", parties: [{ id: "party-cs-1", name: "Party 1", members: [] }] }] }
+                    },
+                    currentActivity: "polarity"
+                };
+                set(ref(db, 'guildData'), defaultData);
+            }
+        };
+
+        window.switchActivity = function(activityKey) {
+            guildData.currentActivity = activityKey;
+            renderApp(); // เปลี่ยนแท็บทันทีฝั่ง View
+        };
+
+        window.updatePolarityTime = function(newTime) {
+            if (!isAdmin) return;
+            if (!guildData.settings) guildData.settings = {};
+            guildData.settings.polarityTime = newTime || "20.00";
+            saveData();
+        };
+
+        function renderApp() {
+            updateAuthUI();
+            updateTabUI();
+            renderGuildCalendar();
+            renderUnassignedPool();
+            renderGroups();
+        }
+
+        function updateAuthUI() {
+            const adminButtons = document.getElementById('admin-action-buttons');
+            const authBtn = document.getElementById('auth-btn');
+            const authIcon = document.getElementById('auth-icon');
+            const authText = document.getElementById('auth-text');
+
+            if (isAdmin) {
+                if (adminButtons) adminButtons.classList.remove('hidden');
+                if (authBtn) {
+                    authBtn.className = "bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-600/50 px-3.5 py-2 rounded-lg font-medium text-sm transition flex items-center gap-2";
+                }
+                if (authIcon) authIcon.className = "fa-solid fa-lock-open text-rose-400";
+                if (authText) authText.innerText = "ออกจากระบบ Admin";
+            } else {
+                if (adminButtons) adminButtons.classList.add('hidden');
+                if (authBtn) {
+                    authBtn.className = "bg-slate-700 hover:bg-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-medium text-sm transition border border-slate-600 flex items-center gap-2";
+                }
+                if (authIcon) authIcon.className = "fa-solid fa-lock text-amber-400";
+                if (authText) authText.innerText = "เข้าสู่ระบบผู้ดูแล";
+            }
+        }
+
+        function renderGuildCalendar() {
+            const gridEl = document.getElementById('guild-calendar-grid');
+            const timeEl = document.getElementById('current-bkk-time');
+            if (!gridEl) return;
+
+            const now = new Date();
+            const bkkDateStr = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Bangkok',
+                weekday: 'long',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).format(now);
+
+            const todayEnglish = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', weekday: 'long' }).format(now);
+            if (timeEl) timeEl.innerText = `เวลาปัจจุบัน (${bkkDateStr})`;
+
+            const daysConfig = [
+                { en: "Monday", th: "วันจันทร์", events: [] },
+                { 
+                    en: "Tuesday", 
+                    th: "วันอังคาร", 
+                    events: [
+                        { name: "Guild Banquet", time: "21.00 - 21.30" },
+                        { name: "Guild League", time: "21.30 - 21.35" },
+                        { name: "Guild League", time: "22.00 - 22.25" }
+                    ] 
+                },
+                { en: "Wednesday", th: "วันพุธ", events: [] },
+                { 
+                    en: "Thursday", 
+                    th: "วันพฤหัสบดี", 
+                    events: [
+                        { name: "Mirror World", time: "21.00 - 21.15" },
+                        { name: "Hazy Forest", time: "21.30 - 21.45" },
+                        { name: "Guild League", time: "22.00 - 22.25" }
+                    ] 
+                },
+                { en: "Friday", th: "วันศุกร์", events: [] },
+                { en: "Saturday", th: "วันเสาร์", events: [] },
+                { 
+                    en: "Sunday", 
+                    th: "วันอาทิตย์", 
+                    events: [
+                        { name: "Polarity Zone", timeEditable: true },
+                        { name: "ศึกชิงปราสาท", time: "21.00 - 22.00" }
+                    ] 
+                }
+            ];
+
+            let html = '';
+            daysConfig.forEach(day => {
+                const isToday = (day.en === todayEnglish);
+                const currentPolarity = (guildData.settings && guildData.settings.polarityTime) ? guildData.settings.polarityTime : "20.00";
+
+                let eventsHTML = '';
+                if (day.events.length === 0) {
+                    eventsHTML = `<div class="text-slate-500 text-[11px] italic py-3 text-center">- ไม่มีกิจกรรม -</div>`;
+                } else {
+                    day.events.forEach(ev => {
+                        if (ev.timeEditable) {
+                            eventsHTML += `
+                                <div class="bg-slate-900/80 border border-slate-700 rounded-lg p-2 text-xs flex flex-col gap-1">
+                                    <div class="font-semibold text-amber-300 flex items-center justify-between">
+                                        <span><i class="fa-solid fa-bolt text-[10px]"></i> ${ev.name}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <input type="text" value="${currentPolarity}" ${!isAdmin ? 'disabled' : ''} onblur="updatePolarityTime(this.value)" class="w-full bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-[11px] text-amber-200 text-center font-mono focus:border-amber-400 focus:outline-none ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}" title="${isAdmin ? 'แก้ไขเวลา Polarity Zone' : 'ต้องเข้าสู่ระบบ Admin เพื่อแก้ไข'}">
+                                        <span class="text-[10px] text-slate-400">น.</span>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            eventsHTML += `
+                                <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg p-2 text-xs flex flex-col justify-between">
+                                    <div class="font-medium text-slate-200 text-[11px] truncate">${ev.name}</div>
+                                    <div class="text-[10px] text-sky-400 font-mono mt-0.5"><i class="fa-regular fa-clock text-[9px]"></i> ${ev.time}</div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                html += `
+                    <div class="bg-slate-900/40 border ${isToday ? 'border-emerald-500/80 shadow-lg shadow-emerald-500/10' : 'border-slate-700/80'} rounded-xl p-3 flex flex-col justify-between transition relative overflow-hidden">
+                        ${isToday ? '<div class="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">วันนี้</div>' : ''}
+                        <div>
+                            <div class="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-700/70">
+                                <span class="w-2.5 h-2.5 rounded-full ${isToday ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20' : 'bg-slate-600'}"></span>
+                                <h3 class="font-bold text-xs ${isToday ? 'text-emerald-300' : 'text-slate-200'}">${day.th}</h3>
+                            </div>
+                            <div class="space-y-1.5">
+                                ${eventsHTML}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            gridEl.innerHTML = html;
+        }
+
+        function updateTabUI() {
+            const tabs = ['polarity', 'guild_league', 'castle_siege'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (!btn) return;
+                if (t === guildData.currentActivity) {
+                    btn.className = "px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 flex items-center gap-2 bg-slate-800 text-white border-purple-500 shadow-sm";
+                } else {
+                    btn.className = "px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 flex items-center gap-2 bg-slate-900/40 text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50";
+                }
+            });
+        }
+
+        window.handleDragStart = function(ev, memberId, sourceId) {
+            if (!isAdmin) return;
+            ev.dataTransfer.setData('text/plain', JSON.stringify({ memberId: memberId, sourceId: sourceId }));
+        };
+
+        function createMemberCardHTML(member, sourceId) {
+            const draggableAttr = isAdmin ? `draggable="true" ondragstart="handleDragStart(event, '${member.id}', '${sourceId}')"` : '';
+            const cursorClass = isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-default';
+
+            return `
+                <div class="bg-slate-900/80 border border-slate-700/80 hover:border-slate-500 p-2.5 rounded-xl flex items-center justify-between ${cursorClass} transition shadow-sm group mb-2"
+                     ${draggableAttr}>
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        ${getClassLogoHTML(member.class)}
+                        <div class="truncate">
+                            <div class="font-semibold text-xs text-slate-100 truncate">${member.name}</div>
+                            <div class="text-[10px] text-slate-400 flex items-center gap-1">
+                                <span class="text-slate-300 font-medium">${member.class}</span> 
+                                ${member.note ? `• <span class="truncate text-sky-300">${member.note}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    ${isAdmin ? `
+                    <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition shrink-0">
+                        <button type="button" onclick="openEditMember('${member.id}')" class="p-1.5 text-slate-400 hover:text-sky-400" title="แก้ไข"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button type="button" onclick="deleteMember('${member.id}')" class="p-1.5 text-slate-400 hover:text-rose-400" title="ลบ"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        function getUnassignedMembersForCurrentActivity() {
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return guildData.members || [];
+            const currentGroups = guildData.activities[guildData.currentActivity].groups || [];
+            const assignedIds = new Set();
+            currentGroups.forEach(g => {
+                if (g.parties) {
+                    g.parties.forEach(p => {
+                        if (p.members) {
+                            p.members.forEach(m => assignedIds.add(m.id));
+                        }
+                    });
+                }
+            });
+            return (guildData.members || []).filter(m => !assignedIds.has(m.id));
+        }
+
+        function renderUnassignedPool() {
+            const poolEl = document.getElementById('unassigned-pool');
+            const countEl = document.getElementById('unassigned-count');
+            if (!poolEl || !countEl) return;
+            poolEl.innerHTML = '';
+            
+            const unassignedList = getUnassignedMembersForCurrentActivity();
+            countEl.innerText = unassignedList.length;
+
+            if(unassignedList.length === 0) {
+                poolEl.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs w-full h-full flex items-center justify-center pointer-events-none">สมาชิกถูกจัดลงปาร์ตี้ในกิจกรรมนี้ครบแล้ว</div>`;
+                return;
+            }
+
+            let membersHTML = '';
+            unassignedList.forEach(member => {
+                membersHTML += createMemberCardHTML(member, 'pool');
+            });
+            poolEl.innerHTML = membersHTML;
+        }
+
+        function renderGroups() {
+            const container = document.getElementById('groups-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const currentGroups = guildData.activities[guildData.currentActivity].groups || [];
+
+            if(currentGroups.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 bg-slate-800/40 rounded-2xl border border-slate-700 text-slate-400">ยังไม่มี Group ในกิจกรรมนี้ ${isAdmin ? 'กดปุ่ม "เพิ่ม Group ใหญ่" ด้านบนเพื่อเริ่มต้น' : '(โหมดดูอย่างเดียว)'}</div>`;
+                return;
+            }
+
+            currentGroups.forEach((group, groupIdx) => {
+                const groupEl = document.createElement('div');
+                groupEl.className = "bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-xl transition-all duration-300";
+                
+                let partiesHTML = '';
+                const parties = group.parties || [];
+                parties.forEach((party, partyIdx) => {
+                    let memberSlotsHTML = '';
+                    const partyMembers = party.members || [];
+                    for(let i = 0; i < 5; i++) {
+                        const member = partyMembers[i];
+                        if(member) {
+                            memberSlotsHTML += createMemberCardHTML(member, party.id);
+                        } else {
+                            memberSlotsHTML += `
+                                <div class="border border-dashed border-slate-700/60 rounded-xl p-2 text-center text-slate-600 text-[11px] flex items-center justify-center h-[54px] bg-slate-900/30 mb-2">
+                                    <span class="text-[10px]">Slot ${i+1} (ว่าง)</span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    partiesHTML += `
+                        <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="flex items-center gap-2">
+                                        ${isAdmin ? `
+                                        <div class="flex flex-col gap-0.5">
+                                            <button type="button" onclick="moveParty('${group.id}', '${party.id}', -1)" ${partyIdx === 0 ? 'disabled class="opacity-20 cursor-not-allowed"' : 'class="text-slate-400 hover:text-slate-200 text-[10px]"'}><i class="fa-solid fa-chevron-up"></i></button>
+                                            <button type="button" onclick="moveParty('${group.id}', '${party.id}', 1)" ${partyIdx === parties.length - 1 ? 'disabled class="opacity-20 cursor-not-allowed"' : 'class="text-slate-400 hover:text-slate-200 text-[10px]"'}><i class="fa-solid fa-chevron-down"></i></button>
+                                        </div>` : ''}
+                                        <input type="text" value="${party.name}" ${!isAdmin ? 'disabled' : ''} onblur="updatePartyName('${group.id}', '${party.id}', this.value)" class="bg-transparent font-semibold text-[13px] text-slate-200 border-b border-transparent ${isAdmin ? 'hover:border-slate-600 focus:border-purple-500 cursor-text' : 'cursor-default'} focus:outline-none px-1 py-0.5 w-36 md:w-44">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-slate-300 font-medium">${partyMembers.length}/5</span>
+                                        ${isAdmin ? `<button type="button" onclick="deleteParty('${group.id}', '${party.id}')" class="text-slate-500 hover:text-rose-400 text-xs p-1"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                    </div>
+                                </div>
+                                <div class="min-h-[280px] pb-2" 
+                                     ${isAdmin ? `ondragover="allowDrop(event)" ondragleave="removeDragOver(event)" ondrop="dropToParty(event, '${party.id}')"` : ''}>
+                                    ${memberSlotsHTML}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                groupEl.innerHTML = `
+                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700 flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-4 h-4 rounded-full shadow-md" style="background-color: ${group.color || '#8b5cf6'}"></div>
+                            <input type="text" value="${group.name}" ${!isAdmin ? 'disabled' : ''} onblur="updateGroupName('${group.id}', this.value)" class="bg-transparent font-bold text-lg text-slate-100 border-b border-transparent ${isAdmin ? 'hover:border-slate-600 focus:border-purple-500 cursor-text' : 'cursor-default'} focus:outline-none px-1">
+                        </div>
+                        ${isAdmin ? `
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="addPartyToGroup('${group.id}')" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> เพิ่มปาร์ตี้
+                            </button>
+                            <button type="button" onclick="deleteGroup('${group.id}')" class="text-slate-500 hover:text-rose-400 text-sm px-2"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>` : ''}
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        ${partiesHTML}
+                    </div>
+                `;
+                container.appendChild(groupEl);
+            });
+        }
+
+        // --- Drag & Drop ---
+        window.allowDrop = function(ev) { if (!isAdmin) return; ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); };
+        window.removeDragOver = function(ev) { if (!isAdmin) return; ev.currentTarget.classList.remove('drag-over'); };
+
+        window.dropToPool = function(ev) {
+            if (!isAdmin) return;
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            try {
+                const data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+                if (data.sourceId === 'pool') return;
+                moveMemberToPool(data.memberId, data.sourceId);
+            } catch (error) { console.error(error); }
+        };
+
+        window.dropToParty = function(ev, targetPartyId) {
+            if (!isAdmin) return;
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            try {
+                const data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+                if (data.sourceId === targetPartyId) return;
+                moveMemberToParty(data.memberId, data.sourceId, targetPartyId);
+            } catch (error) { console.error(error); }
+        };
+
+        function moveMemberToPool(memberId, sourcePartyId) {
+            if (!isAdmin) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            groups.forEach(g => {
+                (g.parties || []).forEach(p => {
+                    if (p.id === sourcePartyId && p.members) {
+                        p.members = p.members.filter(m => m.id !== memberId);
+                    }
+                });
+            });
+            saveData();
+        }
+
+        function moveMemberToParty(memberId, sourceId, targetPartyId) {
+            if (!isAdmin) return;
+            const masterMember = (guildData.members || []).find(m => m.id === memberId);
+            if (!masterMember) return;
+
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            let targetParty = null;
+            for (let g of groups) {
+                let p = (g.parties || []).find(x => x.id === targetPartyId);
+                if (p) { targetParty = p; break; }
+            }
+
+            if (!targetParty) return;
+            if (!targetParty.members) targetParty.members = [];
+            if (targetParty.members.length >= 5) {
+                alert("ปาร์ตี้นี้เต็มแล้ว (จำกัดสูงสุด 5 คน)");
+                return;
+            }
+
+            groups.forEach(g => {
+                (g.parties || []).forEach(p => {
+                    if (p.members) {
+                        p.members = p.members.filter(m => m.id !== memberId);
+                    }
+                });
+            });
+
+            targetParty.members.push({ ...masterMember });
+            saveData();
+        }
+
+        window.moveParty = function(groupId, partyId, direction) {
+            if (!isAdmin) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            const parties = group.parties || [];
+            const index = parties.findIndex(p => p.id === partyId);
+            if (index < 0) return;
+
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= parties.length) return;
+
+            const temp = parties[index];
+            parties[index] = parties[newIndex];
+            parties[newIndex] = temp;
+            saveData();
+        };
+
+        window.openMemberModal = function() {
+            if (!isAdmin) return;
+            const modal = document.getElementById('member-modal');
+            const form = document.getElementById('member-form');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            if (form) form.reset();
+            const editId = document.getElementById('edit-member-id');
+            if (editId) editId.value = '';
+            const title = document.getElementById('member-modal-title');
+            if (title) title.innerText = 'เพิ่มรายชื่อสมาชิก';
+        };
+
+        window.openEditMember = function(memberId) {
+            if (!isAdmin) return;
+            const masterMember = (guildData.members || []).find(m => m.id === memberId);
+            if(!masterMember) return;
+            window.openMemberModal();
+            const title = document.getElementById('member-modal-title');
+            if (title) title.innerText = 'แก้ไขรายชื่อสมาชิก';
+            const editId = document.getElementById('edit-member-id');
+            if (editId) editId.value = masterMember.id;
+            const nameEl = document.getElementById('char-name');
+            if (nameEl) nameEl.value = masterMember.name;
+            const classEl = document.getElementById('char-class');
+            if (classEl) classEl.value = masterMember.class;
+            const noteEl = document.getElementById('char-note');
+            if (noteEl) noteEl.value = masterMember.note || '';
+        };
+
+        window.closeMemberModal = function() {
+            const modal = document.getElementById('member-modal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.handleMemberSubmit = function(e) {
+            e.preventDefault();
+            if (!isAdmin) return;
+            const id = document.getElementById('edit-member-id').value;
+            const name = document.getElementById('char-name').value;
+            const cls = document.getElementById('char-class').value;
+            const note = document.getElementById('char-note').value;
+
+            if (!guildData.members) guildData.members = [];
+
+            if (id) {
+                let mMaster = guildData.members.find(m => m.id === id);
+                if (mMaster) { mMaster.name = name; mMaster.class = cls; mMaster.note = note; }
+
+                if (guildData.activities) {
+                    Object.keys(guildData.activities).forEach(actKey => {
+                        if (guildData.activities[actKey].groups) {
+                            guildData.activities[actKey].groups.forEach(g => {
+                                if (g.parties) {
+                                    g.parties.forEach(p => {
+                                        if (p.members) {
+                                            let mParty = p.members.find(m => m.id === id);
+                                            if (mParty) { mParty.name = name; mParty.class = cls; mParty.note = note; }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            } else {
+                guildData.members.push({ id: 'm-' + Date.now(), name, class: cls, note });
+            }
+            saveData();
+            window.closeMemberModal();
+        };
+
+        window.deleteMember = function(memberId) {
+            if (!isAdmin) return;
+            if(!confirm("ต้องการลบสมาชิกนี้ออกจากกิลด์และทุกกิจกรรมใช่หรือไม่?")) return;
+            guildData.members = (guildData.members || []).filter(m => m.id !== memberId);
+            if (guildData.activities) {
+                Object.keys(guildData.activities).forEach(actKey => {
+                    if (guildData.activities[actKey].groups) {
+                        guildData.activities[actKey].groups.forEach(g => {
+                            if (g.parties) {
+                                g.parties.forEach(p => { 
+                                    if (p.members) {
+                                        p.members = p.members.filter(m => m.id !== memberId); 
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+            saveData();
+        };
+
+        window.openGroupModal = function() {
+            if (!isAdmin) return;
+            const modal = document.getElementById('group-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        };
+
+        window.closeGroupModal = function() {
+            const modal = document.getElementById('group-modal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.handleGroupSubmit = function(e) {
+            e.preventDefault();
+            if (!isAdmin) return;
+            const name = document.getElementById('group-name').value;
+            const color = document.getElementById('group-color').value;
+
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            groups.push({
+                id: 'group-' + Date.now(), name, color,
+                parties: [{ id: 'party-' + Date.now(), name: 'Party 1', members: [] }]
+            });
+            guildData.activities[guildData.currentActivity].groups = groups;
+            saveData();
+            window.closeGroupModal();
+        };
+
+        window.updateGroupName = function(groupId, newName) {
+            if (!isAdmin) return;
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            const group = groups.find(g => g.id === groupId);
+            if (group) { group.name = newName; saveData(); }
+        };
+
+        window.updatePartyName = function(groupId, partyId, newName) {
+            if (!isAdmin) return;
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            const group = groups.find(g => g.id === groupId);
+            if (group && group.parties) {
+                const party = group.parties.find(p => p.id === partyId);
+                if (party) { party.name = newName; saveData(); }
+            }
+        };
+
+        window.deleteGroup = function(groupId) {
+            if (!isAdmin) return;
+            if(!confirm("ต้องการลบกลุ่มนี้ พร้อมปาร์ตี้ทั้งหมดในกลุ่มนี้ใช่หรือไม่?")) return;
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            guildData.activities[guildData.currentActivity].groups = groups.filter(g => g.id !== groupId);
+            saveData();
+        };
+
+        window.addPartyToGroup = function(groupId) {
+            if (!isAdmin) return;
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                if (!group.parties) group.parties = [];
+                group.parties.push({ 
+                    id: 'party-' + Date.now(), 
+                    name: `Party ${group.parties.length + 1}`, 
+                    members: [] 
+                });
+                saveData();
+            }
+        };
+
+        window.deleteParty = function(groupId, partyId) {
+            if (!isAdmin) return;
+            if (!guildData.activities || !guildData.activities[guildData.currentActivity]) return;
+            const groups = guildData.activities[guildData.currentActivity].groups || [];
+            const group = groups.find(g => g.id === groupId);
+            if (group && group.parties) {
+                if(group.parties.length <= 1) { alert("กลุ่มนี้ต้องมีอย่างน้อย 1 ปาร์ตี้"); return; }
+                if(!confirm("ต้องการลบปาร์ตี้นี้ใช่หรือไม่?")) return;
+                group.parties = group.parties.filter(p => p.id !== partyId);
+                saveData();
+            }
+        };
+
+        // Realtime Sync ด้วย Firebase onValue
+        const guildDataRef = ref(db, 'guildData');
+        onValue(guildDataRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                guildData = data;
+            } else {
+                if (isAdmin) saveData();
+            }
+            renderApp();
+        }, (error) => {
+            console.error("Firebase connection error: ", error);
+        });
+    </script>
+</body>
+</html>

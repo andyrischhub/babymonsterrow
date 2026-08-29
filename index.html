@@ -7,6 +7,7 @@
 <title>Babymonster Guild Party Manager</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -72,6 +73,30 @@ body {
 
 .modal-backdrop {
     backdrop-filter: blur(7px);
+}
+
+/* Landscape phones: use the desktop side-by-side layout instead of
+   the stacked mobile layout, since rotating gives enough width and
+   the stacked layout wastes the limited height. Scoped below the lg:
+   breakpoint so it only affects phones/small tablets in landscape -
+   anything already lg: and up keeps using its normal desktop rules. */
+@media (orientation: landscape) and (max-width: 1023px) and (min-width: 600px) {
+
+    #main-layout {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    #main-layout > aside {
+        grid-column: span 1 / span 1;
+        height: 75vh;
+        position: sticky;
+        top: 6rem;
+    }
+
+    #main-layout > #groups-container {
+        grid-column: span 3 / span 3;
+    }
+
 }
 </style>
 </head>
@@ -467,8 +492,9 @@ class="lg:col-span-1
        border border-slate-800
        rounded-2xl p-4
        flex flex-col
-       h-[75vh]
-       sticky top-24">
+       h-[45vh]
+       lg:h-[75vh]
+       lg:sticky lg:top-24">
 
 <div class="flex justify-between items-center
             pb-3 mb-3 border-b border-slate-800">
@@ -816,6 +842,46 @@ class="fixed inset-0 bg-black/70 modal-backdrop
 
 
 <!-- =========================================================
+     ASSIGN TO PARTY MODAL (tap-to-add, mobile-friendly
+     alternative to drag & drop)
+========================================================= -->
+
+<div id="assign-party-modal"
+class="fixed inset-0 bg-black/70 modal-backdrop
+       hidden items-center justify-center z-50 p-4">
+
+<div class="bg-slate-900 border border-slate-700
+            w-full max-w-sm rounded-2xl
+            max-h-[80vh] flex flex-col">
+
+<div class="p-5 border-b border-slate-700
+            flex justify-between items-center">
+
+<div>
+<h3 class="font-bold">
+เพิ่มเข้า Party
+</h3>
+<p id="assign-party-member-name"
+   class="text-xs text-slate-500 mt-1">
+</p>
+</div>
+
+<button onclick="closeAssignPartyModal()">
+<i class="fa-solid fa-xmark"></i>
+</button>
+
+</div>
+
+<div id="assign-party-list"
+     class="p-4 space-y-2 overflow-y-auto custom-scrollbar">
+</div>
+
+</div>
+
+</div>
+
+
+<!-- =========================================================
      FOOTER - GUILD SOCIAL LINKS
 ========================================================= -->
 
@@ -929,6 +995,9 @@ let isAdmin =
 ========================================================= */
 
 let attendanceEditingEvent = null;
+let currentGuildLeagueRoom = "main";
+let pendingAttendanceStatus = {};
+let pendingDailyAttendanceStatus = {};
 let attendanceSearchText = "";
 let attendanceSortMode = "name-asc";
 
@@ -2344,6 +2413,323 @@ function (key) {
 };
 
 
+window.setGuildLeagueRoom =
+function (room) {
+
+    currentGuildLeagueRoom =
+        room;
+
+    renderGroups();
+
+};
+
+
+window.exportGroupsAsImage =
+async function (buttonEl) {
+
+    const activityKey =
+        guildData.currentActivity;
+
+    const activity =
+        guildData.activities
+        ?.[activityKey];
+
+    if (!activity) return;
+
+
+    const isGuildLeague =
+        activityKey === "guild_league";
+
+    const allGroups =
+        activity.groups || [];
+
+    const groups =
+        isGuildLeague
+        ? allGroups.filter(group =>
+            (group.room || "main") ===
+            currentGuildLeagueRoom
+        )
+        : allGroups;
+
+
+    if (!groups.length) {
+
+        alert(
+            "ยังไม่มี Group ให้ export"
+        );
+
+        return;
+
+    }
+
+
+    const title =
+        (activity.name || "") +
+        (
+            isGuildLeague
+            ? (
+                currentGuildLeagueRoom === "main"
+                ? " - ห้องหลัก"
+                : " - ห้องรอง"
+            )
+            : ""
+        );
+
+
+    const originalLabel =
+        buttonEl
+        ? buttonEl.innerHTML
+        : null;
+
+    if (buttonEl) {
+
+        buttonEl.disabled = true;
+
+        buttonEl.innerHTML =
+            `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้างรูป...`;
+
+    }
+
+
+    try {
+
+        const node =
+            buildExportNode(
+                title,
+                groups
+            );
+
+        document.body.appendChild(node);
+
+        const canvas =
+            await html2canvas(node, {
+                scale: 1.5,
+                backgroundColor: "#0f172a",
+                useCORS: true
+            });
+
+        document.body.removeChild(node);
+
+        const link =
+            document.createElement("a");
+
+        link.download =
+            title.replace(/\s+/g, "_") +
+            "_" +
+            getBangkokDateKey(new Date()) +
+            ".jpg";
+
+        link.href =
+            canvas.toDataURL(
+                "image/jpeg",
+                0.9
+            );
+
+        link.click();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "สร้างรูปไม่สำเร็จ กรุณาลองใหม่"
+        );
+
+    }
+
+    if (buttonEl) {
+
+        buttonEl.disabled = false;
+
+        buttonEl.innerHTML =
+            originalLabel;
+
+    }
+
+};
+
+
+function buildExportNode(
+    title,
+    groups
+) {
+
+    const container =
+        document.createElement("div");
+
+    container.style.cssText =
+        "position:fixed;left:-9999px;top:0;" +
+        "width:900px;padding:20px;" +
+        "background:#0f172a;" +
+        "font-family:'Prompt',sans-serif;" +
+        "color:#f1f5f9;";
+
+
+    const titleEl =
+        document.createElement("div");
+
+    titleEl.style.cssText =
+        "text-align:center;font-size:20px;" +
+        "font-weight:800;padding:10px 0 16px;";
+
+    titleEl.textContent =
+        title;
+
+    container.appendChild(titleEl);
+
+
+    groups.forEach(group => {
+
+        const groupColor =
+            group.color || "#475569";
+
+
+        const bandWrap =
+            document.createElement("div");
+
+        bandWrap.style.cssText =
+            "margin-bottom:14px;border-radius:10px;" +
+            "overflow:hidden;border:1px solid " +
+            groupColor + "55;";
+
+
+        const band =
+            document.createElement("div");
+
+        band.style.cssText =
+            "background:" + groupColor + ";" +
+            "color:#0f172a;font-weight:800;" +
+            "font-size:14px;padding:8px 12px;";
+
+        band.textContent =
+            group.name || "Group";
+
+        bandWrap.appendChild(band);
+
+
+        const partiesRow =
+            document.createElement("div");
+
+        partiesRow.style.cssText =
+            "display:flex;flex-wrap:wrap;" +
+            "gap:1px;background:" + groupColor + "33;";
+
+
+        (group.parties || [])
+            .forEach(party => {
+
+                const col =
+                    document.createElement("div");
+
+                col.style.cssText =
+                    "flex:1 1 160px;min-width:150px;" +
+                    "background:#1e293b;padding:8px;";
+
+
+                const partyHeader =
+                    document.createElement("div");
+
+                partyHeader.style.cssText =
+                    "font-size:11px;font-weight:700;" +
+                    "color:" + groupColor + ";" +
+                    "text-align:center;padding-bottom:6px;" +
+                    "border-bottom:1px solid #334155;" +
+                    "margin-bottom:6px;";
+
+                partyHeader.textContent =
+                    party.name || "Party";
+
+                col.appendChild(partyHeader);
+
+
+                const members =
+                    party.members || [];
+
+                for (let i = 0; i < 5; i++) {
+
+                    const member =
+                        members[i];
+
+                    const row =
+                        document.createElement("div");
+
+                    row.style.cssText =
+                        "display:flex;justify-content:space-between;" +
+                        "gap:6px;font-size:11px;padding:3px 2px;" +
+                        (
+                            member
+                            ? "color:#e2e8f0;"
+                            : "color:#475569;"
+                        );
+
+
+                    const nameSpan =
+                        document.createElement("span");
+
+                    nameSpan.style.cssText =
+                        "overflow:hidden;text-overflow:ellipsis;" +
+                        "white-space:nowrap;font-weight:600;";
+
+                    nameSpan.textContent =
+                        member
+                        ? (member.name || "-")
+                        : "ว่าง";
+
+                    row.appendChild(nameSpan);
+
+
+                    if (member) {
+
+                        const cpSpan =
+                            document.createElement("span");
+
+                        cpSpan.style.cssText =
+                            "color:#7dd3fc;white-space:nowrap;";
+
+                        cpSpan.textContent =
+                            member.cp
+                            ? Number(member.cp)
+                                .toLocaleString()
+                            : "";
+
+                        row.appendChild(cpSpan);
+
+                    }
+
+
+                    col.appendChild(row);
+
+                }
+
+                partiesRow.appendChild(col);
+
+            });
+
+        bandWrap.appendChild(partiesRow);
+
+        container.appendChild(bandWrap);
+
+    });
+
+
+    const footer =
+        document.createElement("div");
+
+    footer.style.cssText =
+        "text-align:center;font-size:10px;" +
+        "color:#475569;padding-top:6px;";
+
+    footer.textContent =
+        "Babymonster Guild Manager";
+
+    container.appendChild(footer);
+
+
+    return container;
+
+}
+
+
 /* =========================================================
    TAB UI
 ========================================================= */
@@ -2741,6 +3127,67 @@ function createMemberCardHTML(
                         "
                     >
 
+                        ${
+                            sourceId === "pool"
+
+                            ? `
+                                <button
+                                    onclick="
+                                        openAssignPartyModal(
+                                            '${escapeHTML(
+                                                String(member.id || "")
+                                            )}'
+                                        )
+                                    "
+                                    title="เพิ่มเข้า Party"
+                                    class="
+                                        p-1.5
+                                        text-slate-500
+                                        hover:text-emerald-400
+                                    "
+                                >
+
+                                    <i
+                                        class="
+                                            fa-solid
+                                            fa-circle-plus
+                                            text-xs
+                                        "
+                                    ></i>
+
+                                </button>
+                              `
+
+                            : `
+                                <button
+                                    onclick="
+                                        removeMemberFromPartyDirect(
+                                            '${escapeHTML(
+                                                String(member.id || "")
+                                            )}'
+                                        )
+                                    "
+                                    title="เอาออกจาก Party"
+                                    class="
+                                        p-1.5
+                                        text-slate-500
+                                        hover:text-amber-400
+                                    "
+                                >
+
+                                    <i
+                                        class="
+                                            fa-solid
+                                            fa-arrow-left
+                                            text-xs
+                                        "
+                                    ></i>
+
+                                </button>
+                              `
+                        }
+
+
                         <button
                             onclick="
                                 openEditMember(
@@ -3099,12 +3546,110 @@ function renderGroups() {
     }
 
 
-    const groups =
+    const isGuildLeague =
+        guildData.currentActivity ===
+        "guild_league";
+
+
+    const allGroups =
         activity.groups || [];
 
 
+    const groups =
+        isGuildLeague
+        ? allGroups.filter(group =>
+            (group.room || "main") ===
+            currentGuildLeagueRoom
+        )
+        : allGroups;
+
+
+    const roomSwitcherHTML =
+        isGuildLeague
+        ? `
+            <button
+                onclick="setGuildLeagueRoom('main')"
+                class="
+                    px-4
+                    py-2
+                    rounded-lg
+                    text-sm
+                    font-medium
+                    transition
+                    ${
+                        currentGuildLeagueRoom === "main"
+                        ? "bg-purple-600 text-white"
+                        : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                    }
+                "
+            >
+                <i class="fa-solid fa-shield-halved mr-1"></i>
+                ห้องหลัก
+            </button>
+            <button
+                onclick="setGuildLeagueRoom('secondary')"
+                class="
+                    px-4
+                    py-2
+                    rounded-lg
+                    text-sm
+                    font-medium
+                    transition
+                    ${
+                        currentGuildLeagueRoom === "secondary"
+                        ? "bg-purple-600 text-white"
+                        : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                    }
+                "
+            >
+                <i class="fa-solid fa-shield mr-1"></i>
+                ห้องรอง
+            </button>
+        `
+        : "";
+
+
+    const toolbarHTML =
+        `
+            <div class="
+                flex
+                flex-wrap
+                items-center
+                justify-between
+                gap-2
+                mb-4
+            ">
+                <div class="flex gap-2 flex-wrap">
+                    ${roomSwitcherHTML}
+                </div>
+
+                <button
+                    onclick="exportGroupsAsImage(this)"
+                    class="
+                        px-4
+                        py-2
+                        rounded-lg
+                        text-sm
+                        font-medium
+                        bg-sky-600
+                        hover:bg-sky-500
+                        text-white
+                        transition
+                    "
+                >
+                    <i class="fa-solid fa-image mr-1"></i>
+                    Export รูป
+                </button>
+            </div>
+        `;
+
+
     container.innerHTML =
-        groups.map(group => {
+        toolbarHTML +
+
+        (
+            groups.length
+            ? groups.map(group => {
 
 
             const parties =
@@ -3523,7 +4068,26 @@ function renderGroups() {
 
             `;
 
-        }).join("");
+        }).join("")
+            : `
+                <div class="
+                    text-center
+                    text-slate-600
+                    text-sm
+                    py-10
+                ">
+                    ยังไม่มี Group ใน${
+                        isGuildLeague
+                        ? (
+                            currentGuildLeagueRoom === "main"
+                            ? "ห้องหลัก"
+                            : "ห้องรอง"
+                        )
+                        : "กิจกรรมนี้"
+                    } กด "เพิ่ม Group" เพื่อสร้างใหม่
+                </div>
+            `
+        );
 
 }
 
@@ -3593,9 +4157,23 @@ function (event) {
         );
 
 
+    removeMemberFromPartyDirect(
+        data.memberId
+    );
+
+};
+
+
+window.removeMemberFromPartyDirect =
+function (memberId) {
+
+    if (!isAdmin) return;
+
     const activity =
         guildData.activities
         [guildData.currentActivity];
+
+    if (!activity) return;
 
 
     (activity.groups || [])
@@ -3609,7 +4187,7 @@ function (event) {
                         .filter(
                             m =>
                                 m.id !==
-                                data.memberId
+                                memberId
                         );
 
                 });
@@ -3618,6 +4196,10 @@ function (event) {
 
 
     saveData();
+
+    renderGroups();
+
+    renderUnassignedPool();
 
 };
 
@@ -3653,9 +4235,27 @@ function (
     }
 
 
+    assignMemberToPartyDirect(
+        data.memberId,
+        targetPartyId
+    );
+
+};
+
+
+window.assignMemberToPartyDirect =
+function (
+    memberId,
+    targetPartyId
+) {
+
+    if (!isAdmin) return;
+
     const activity =
         guildData.activities
         [guildData.currentActivity];
+
+    if (!activity) return;
 
 
     let target = null;
@@ -3706,7 +4306,7 @@ function (
                         .filter(
                             m =>
                                 m.id !==
-                                data.memberId
+                                memberId
                         );
 
                 });
@@ -3718,7 +4318,7 @@ function (
         guildData.members.find(
             m =>
                 m.id ===
-                data.memberId
+                memberId
         );
 
 
@@ -3731,6 +4331,161 @@ function (
 
 
     saveData();
+
+    renderGroups();
+
+    renderUnassignedPool();
+
+};
+
+
+/* =========================================================
+   ASSIGN TO PARTY MODAL (tap-to-add)
+========================================================= */
+
+window.openAssignPartyModal =
+function (memberId) {
+
+    if (!isAdmin) return;
+
+
+    const member =
+        (guildData.members || [])
+        .find(m => m.id === memberId);
+
+    if (!member) return;
+
+
+    const activityKey =
+        guildData.currentActivity;
+
+    const activity =
+        guildData.activities
+        ?.[activityKey];
+
+    if (!activity) return;
+
+
+    const isGuildLeague =
+        activityKey === "guild_league";
+
+    const allGroups =
+        activity.groups || [];
+
+    const groups =
+        isGuildLeague
+        ? allGroups.filter(group =>
+            (group.room || "main") ===
+            currentGuildLeagueRoom
+        )
+        : allGroups;
+
+
+    document
+        .getElementById(
+            "assign-party-member-name"
+        )
+        .textContent =
+        member.name || "";
+
+
+    const listEl =
+        document.getElementById(
+            "assign-party-list"
+        );
+
+
+    let rows = "";
+
+
+    groups.forEach(group => {
+
+        rows += `
+            <div class="
+                text-[11px] font-semibold
+                mt-2 mb-1
+            " style="color:${escapeHTML(
+                group.color || "#94a3b8"
+            )}">
+                ${escapeHTML(group.name || "Group")}
+            </div>
+        `;
+
+
+        (group.parties || [])
+            .forEach(party => {
+
+                const count =
+                    (party.members || []).length;
+
+                const isFull =
+                    count >= 5;
+
+                rows += `
+                    <button
+                        onclick="${
+                            isFull
+                            ? ""
+                            : `assignMemberToPartyDirect('${escapeHTML(memberId)}', '${escapeHTML(party.id)}'); closeAssignPartyModal();`
+                        }"
+                        ${isFull ? "disabled" : ""}
+                        class="
+                            w-full flex items-center justify-between
+                            px-3 py-2.5 rounded-lg border text-sm
+                            ${
+                                isFull
+                                ? "bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed"
+                                : "bg-slate-800 border-slate-700 hover:border-emerald-500 hover:bg-slate-700"
+                            }
+                        "
+                    >
+                        <span>${escapeHTML(party.name || "Party")}</span>
+                        <span class="text-xs ${isFull ? "text-rose-500" : "text-slate-400"}">
+                            ${count}/5 ${isFull ? "· เต็ม" : ""}
+                        </span>
+                    </button>
+                `;
+
+            });
+
+    });
+
+
+    if (!groups.length) {
+
+        rows = `
+            <div class="text-center text-slate-600 text-sm py-6">
+                ยังไม่มี Group กด "เพิ่ม Group" ก่อน
+            </div>
+        `;
+
+    }
+
+
+    listEl.innerHTML = rows;
+
+
+    const modal =
+        document.getElementById(
+            "assign-party-modal"
+        );
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+
+};
+
+
+window.closeAssignPartyModal =
+function () {
+
+    const modal =
+        document.getElementById(
+            "assign-party-modal"
+        );
+
+    modal.classList.remove("flex");
+    modal.classList.add("hidden");
 
 };
 
@@ -4157,6 +4912,11 @@ function (event) {
 
         color,
 
+        room:
+            guildData.currentActivity === "guild_league"
+            ? currentGuildLeagueRoom
+            : undefined,
+
         parties: [
 
             {
@@ -4178,6 +4938,8 @@ function (event) {
     saveData();
 
     closeGroupModal();
+
+    renderGroups();
 
 };
 
@@ -4585,6 +5347,9 @@ function (
     }
 
 
+    pendingAttendanceStatus = {};
+
+
     renderAttendancePage();
 
 };
@@ -4731,6 +5496,7 @@ function getEventAttendanceRowsHTML(
         .map(member => {
 
             const status =
+                pendingAttendanceStatus[member.id] ??
                 getAttendanceStatus(
                     activityKey,
                     eventId,
@@ -4949,6 +5715,10 @@ function (
     if (!isAdmin) return;
 
 
+    pendingAttendanceStatus[memberId] =
+        status;
+
+
     const wrapper =
         document.querySelector(
             `[data-attendance-member="${memberId}"]`
@@ -5056,22 +5826,19 @@ function () {
         attendance[eventId] = {};
 
 
-    document
-        .querySelectorAll(
-            "[data-attendance-member]"
-        )
-        .forEach(wrapper => {
-
-            const memberId =
-                wrapper.dataset.memberId;
-
+    (guildData.members || [])
+        .forEach(member => {
 
             const status =
-                wrapper.dataset.selected ||
-                "absent";
+                pendingAttendanceStatus[member.id] ??
+                getAttendanceStatus(
+                    activityKey,
+                    eventId,
+                    member.id
+                );
 
 
-            attendance[eventId][memberId] = {
+            attendance[eventId][member.id] = {
 
                 status,
 
@@ -5084,6 +5851,9 @@ function () {
 
 
     saveData();
+
+
+    pendingAttendanceStatus = {};
 
 
     renderAttendancePage();
@@ -5268,6 +6038,8 @@ function (dateKey) {
     attendanceSelectedDate =
         dateKey;
 
+    pendingDailyAttendanceStatus = {};
+
     renderAttendancePage();
 
 };
@@ -5288,6 +6060,8 @@ function (days) {
     attendanceSelectedDate =
         getBangkokDateKey(date);
 
+    pendingDailyAttendanceStatus = {};
+
     renderAttendancePage();
 
 };
@@ -5301,6 +6075,9 @@ function (
 
     if (!isAdmin)
         return;
+
+    pendingDailyAttendanceStatus[memberId] =
+        status;
 
     const wrapper =
         document.querySelector(
@@ -5378,20 +6155,17 @@ function () {
             attendanceSelectedDate
         );
 
-    document
-        .querySelectorAll(
-            "[data-daily-attendance-member]"
-        )
-        .forEach(wrapper => {
-
-            const memberId =
-                wrapper.dataset.memberId;
+    (guildData.members || [])
+        .forEach(member => {
 
             const status =
-                wrapper.dataset.selected ||
-                "inactive";
+                pendingDailyAttendanceStatus[member.id] ??
+                getDailyAttendanceStatus(
+                    attendanceSelectedDate,
+                    member.id
+                );
 
-            attendance[memberId] = {
+            attendance[member.id] = {
                 status,
                 updatedAt: Date.now()
             };
@@ -5399,6 +6173,8 @@ function () {
         });
 
     saveData();
+
+    pendingDailyAttendanceStatus = {};
 
     renderAttendancePage();
 
@@ -5457,6 +6233,7 @@ function getDailyAttendanceRowsHTML() {
     return members.map(member => {
 
         const status =
+            pendingDailyAttendanceStatus[member.id] ??
             getDailyAttendanceStatus(
                 attendanceSelectedDate,
                 member.id

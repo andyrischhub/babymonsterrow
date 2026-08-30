@@ -109,22 +109,22 @@ body {
 
 <header class="bg-slate-900/95 border-b border-slate-800 shadow-xl sticky top-0 z-40">
 
-<div class="max-w-7xl mx-auto px-4 py-4">
+<div class="max-w-7xl mx-auto px-4 py-2.5 lg:py-4">
 
-<div class="flex flex-col xl:flex-row justify-between items-center gap-4">
+<div class="flex flex-col xl:flex-row justify-between items-center gap-2 lg:gap-4">
 
-<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 lg:gap-3">
 
 <div class="bg-gradient-to-tr from-purple-600 to-pink-500
-            p-3 rounded-xl shadow-lg">
+            p-1.5 lg:p-3 rounded-lg lg:rounded-xl shadow-lg">
 
-<i class="fa-solid fa-shield-halved text-2xl text-white"></i>
+<i class="fa-solid fa-shield-halved text-base lg:text-2xl text-white"></i>
 
 </div>
 
 <div>
 
-<h1 class="text-xl md:text-2xl font-bold
+<h1 class="text-sm lg:text-2xl font-bold
            text-transparent bg-clip-text
            bg-gradient-to-r from-purple-400 to-pink-400">
 
@@ -132,7 +132,7 @@ Babymonster Guild Manager
 
 </h1>
 
-<p class="text-xs text-slate-500">
+<p class="hidden lg:block text-xs text-slate-500">
 Ragnarok The New World · Party & Attendance Manager
 </p>
 
@@ -141,41 +141,41 @@ Ragnarok The New World · Party & Attendance Manager
 </div>
 
 
-<div class="flex flex-wrap justify-center gap-2">
+<div class="flex flex-wrap justify-center gap-1.5 lg:gap-2">
 
 <button
 id="sheet-btn"
 onclick="openSheetModal()"
-class="bg-green-600 hover:bg-green-500 px-3.5 py-2
-       rounded-lg text-sm font-medium shadow
-       flex items-center gap-2">
+class="hidden bg-green-600 hover:bg-green-500 px-2.5 lg:px-3.5 py-1.5 lg:py-2
+       rounded-lg text-xs lg:text-sm font-medium shadow
+       flex items-center gap-1.5 lg:gap-2">
 
 <i class="fa-solid fa-table"></i>
-Google Sheet
+<span class="hidden lg:inline">Google Sheet</span>
 
 </button>
 
 
 <div id="admin-action-buttons"
-     class="hidden flex flex-wrap gap-2">
+     class="hidden flex flex-wrap gap-1.5 lg:gap-2">
 
 <button
 onclick="openGroupModal()"
 class="bg-indigo-600 hover:bg-indigo-500
-       px-3.5 py-2 rounded-lg text-sm">
+       px-2.5 lg:px-3.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm">
 
 <i class="fa-solid fa-layer-group"></i>
-เพิ่ม Group
+<span class="hidden lg:inline">เพิ่ม Group</span>
 
 </button>
 
 <button
 onclick="openMemberModal()"
 class="bg-emerald-600 hover:bg-emerald-500
-       px-3.5 py-2 rounded-lg text-sm">
+       px-2.5 lg:px-3.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm">
 
 <i class="fa-solid fa-user-plus"></i>
-เพิ่มสมาชิก
+<span class="hidden lg:inline">เพิ่มสมาชิก</span>
 
 </button>
 
@@ -183,7 +183,7 @@ class="bg-emerald-600 hover:bg-emerald-500
 onclick="resetData()"
 class="bg-rose-600/20 hover:bg-rose-600
        border border-rose-500/40
-       px-3 py-2 rounded-lg text-sm">
+       px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm">
 
 <i class="fa-solid fa-rotate-right"></i>
 
@@ -197,13 +197,13 @@ id="auth-btn"
 onclick="toggleAdminLogin()"
 class="bg-slate-800 hover:bg-slate-700
        border border-slate-700
-       px-3.5 py-2 rounded-lg text-sm
-       flex items-center gap-2">
+       px-2.5 lg:px-3.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm
+       flex items-center gap-1.5 lg:gap-2">
 
 <i id="auth-icon"
    class="fa-solid fa-lock text-amber-400"></i>
 
-<span id="auth-text">
+<span id="auth-text" class="hidden lg:inline">
 เข้าสู่ระบบผู้ดูแล
 </span>
 
@@ -447,6 +447,18 @@ class="activity-tab px-5 py-3 text-sm rounded-t-xl">
 
 
 <button
+id="tab-members"
+onclick="switchActivity('members')"
+class="activity-tab px-5 py-3 text-sm rounded-t-xl">
+
+<i class="fa-solid fa-address-card text-sky-400 mr-1"></i>
+
+Members
+
+</button>
+
+
+<button
 id="tab-attendance"
 onclick="switchActivity('attendance')"
 class="activity-tab px-5 py-3 text-sm rounded-t-xl">
@@ -492,7 +504,7 @@ class="lg:col-span-1
        border border-slate-800
        rounded-2xl p-4
        flex flex-col
-       h-[45vh]
+       h-[65vh]
        lg:h-[75vh]
        lg:sticky lg:top-24">
 
@@ -518,7 +530,7 @@ class="lg:col-span-1
 </div>
 
 
-<p class="text-xs text-slate-500 mb-3">
+<p class="hidden lg:block text-xs text-slate-500 mb-3">
 
 สมาชิกที่ยังไม่ได้ลง Party
 ในกิจกรรมนี้
@@ -526,7 +538,18 @@ class="lg:col-span-1
 </p>
 
 <!-- MEMBER FILTER / SORT -->
-<div class="space-y-2 mb-3">
+<button
+    type="button"
+    onclick="document.getElementById('member-filter-panel').classList.toggle('hidden')"
+    class="lg:hidden w-full flex items-center justify-between
+           px-3 py-2 mb-2 rounded-lg
+           bg-slate-800/60 border border-slate-700
+           text-xs text-slate-300">
+    <span><i class="fa-solid fa-filter mr-1"></i> ค้นหา / กรอง / เรียงลำดับ</span>
+    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+</button>
+
+<div id="member-filter-panel" class="space-y-2 mb-3 hidden lg:block">
     <input
         id="member-filter-name"
         type="text"
@@ -609,6 +632,15 @@ class="lg:col-span-3 space-y-6">
 </section>
 
 </div>
+
+
+<!-- MEMBERS -->
+
+<section
+id="members-container"
+class="hidden">
+
+</section>
 
 
 <!-- DAILY ATTENDANCE -->
@@ -997,9 +1029,9 @@ let isAdmin =
 let attendanceEditingEvent = null;
 let currentGuildLeagueRoom = "main";
 let pendingAttendanceStatus = {};
-let pendingDailyAttendanceStatus = {};
 let attendanceSearchText = "";
 let attendanceSortMode = "name-asc";
+let membersSearchText = "";
 
 
 /* =========================================================
@@ -1415,6 +1447,11 @@ function updateAuthUI() {
             "admin-action-buttons"
         );
 
+    const sheetBtn =
+        document.getElementById(
+            "sheet-btn"
+        );
+
     const btn =
         document.getElementById("auth-btn");
 
@@ -1429,11 +1466,13 @@ function updateAuthUI() {
 
         buttons.classList.remove("hidden");
 
+        sheetBtn.classList.remove("hidden");
+
         btn.className =
             "bg-rose-600/20 hover:bg-rose-600 " +
             "border border-rose-500/40 " +
-            "px-3.5 py-2 rounded-lg text-sm " +
-            "flex items-center gap-2";
+            "px-2.5 lg:px-3.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm " +
+            "flex items-center gap-1.5 lg:gap-2";
 
         icon.className =
             "fa-solid fa-lock-open text-rose-400";
@@ -1445,11 +1484,13 @@ function updateAuthUI() {
 
         buttons.classList.add("hidden");
 
+        sheetBtn.classList.add("hidden");
+
         btn.className =
             "bg-slate-800 hover:bg-slate-700 " +
             "border border-slate-700 " +
-            "px-3.5 py-2 rounded-lg text-sm " +
-            "flex items-center gap-2";
+            "px-2.5 lg:px-3.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm " +
+            "flex items-center gap-1.5 lg:gap-2";
 
         icon.className =
             "fa-solid fa-lock text-amber-400";
@@ -1578,6 +1619,14 @@ async function () {
 
     GOOGLE_SHEET_URL =
         url;
+
+    guildData.settings =
+        guildData.settings || {};
+
+    guildData.settings.sheetURL =
+        url;
+
+    saveData();
 
     localStorage.setItem(
         "googleSheetURLBBM",
@@ -2510,22 +2559,98 @@ async function (buttonEl) {
 
         document.body.removeChild(node);
 
-        const link =
-            document.createElement("a");
 
-        link.download =
+        const filename =
             title.replace(/\s+/g, "_") +
             "_" +
             getBangkokDateKey(new Date()) +
             ".jpg";
 
-        link.href =
-            canvas.toDataURL(
-                "image/jpeg",
-                0.9
+
+        const blob =
+            await new Promise(resolve =>
+                canvas.toBlob(
+                    resolve,
+                    "image/jpeg",
+                    0.9
+                )
             );
 
-        link.click();
+        if (!blob) {
+
+            throw new Error(
+                "สร้างไฟล์รูปไม่สำเร็จ"
+            );
+
+        }
+
+
+        const file =
+            new File(
+                [blob],
+                filename,
+                { type: "image/jpeg" }
+            );
+
+
+        const canUseShareSheet =
+            navigator.canShare &&
+            navigator.canShare({
+                files: [file]
+            });
+
+
+        if (canUseShareSheet) {
+
+            try {
+
+                await navigator.share({
+                    files: [file],
+                    title
+                });
+
+            } catch (shareError) {
+
+                if (
+                    shareError.name !==
+                    "AbortError"
+                ) {
+
+                    throw shareError;
+
+                }
+
+            }
+
+        } else {
+
+            const blobUrl =
+                URL.createObjectURL(
+                    blob
+                );
+
+            const link =
+                document.createElement("a");
+
+            link.download = filename;
+
+            link.href = blobUrl;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+
+            setTimeout(
+                () =>
+                    URL.revokeObjectURL(
+                        blobUrl
+                    ),
+                10000
+            );
+
+        }
 
     } catch (error) {
 
@@ -2740,6 +2865,7 @@ function updateTabUI() {
         "polarity",
         "guild_league",
         "castle_siege",
+        "members",
         "attendance",
         "analytics"
     ].forEach(key => {
@@ -3222,6 +3348,7 @@ function createMemberCardHTML(
                                     )}'
                                 )
                             "
+                            title="ลบสมาชิก"
                             class="
                                 p-1.5
                                 text-slate-500
@@ -4774,6 +4901,10 @@ function (event) {
 
     closeMemberModal();
 
+    renderGroups();
+
+    renderUnassignedPool();
+
 };
 
 
@@ -4787,9 +4918,23 @@ function (id) {
     if (!isAdmin) return;
 
 
+    const member =
+        guildData.members.find(
+            m =>
+                m.id === id
+        );
+
+    if (!member) return;
+
+
     if (
         !confirm(
-            "ต้องการลบสมาชิกนี้ใช่หรือไม่?"
+            "ต้องการลบ \"" +
+            (member.name || "สมาชิกนี้") +
+            "\" ออกจากระบบทั้งหมดใช่หรือไม่?\n\n" +
+            "จะถูกเอาออกจากคลังรายชื่อ, Party, " +
+            "Attendance และ Analytics ทั้งหมด " +
+            "และไม่สามารถกู้คืนได้"
         )
     )
         return;
@@ -4823,10 +4968,32 @@ function (id) {
 
             });
 
+
+        Object.values(
+            activity.attendance || {}
+        ).forEach(eventAttendance => {
+
+            delete eventAttendance[id];
+
+        });
+
+    });
+
+
+    Object.values(
+        guildData.dailyAttendance || {}
+    ).forEach(dayAttendance => {
+
+        delete dayAttendance[id];
+
     });
 
 
     saveData();
+
+    renderGroups();
+
+    renderUnassignedPool();
 
 };
 
@@ -5458,13 +5625,14 @@ function renderAttendanceMemberRows() {
     if (!rowsContainer)
         return;
 
+    if (!attendanceEditingEvent)
+        return;
+
     rowsContainer.innerHTML =
-        attendanceEditingEvent
-        ? getEventAttendanceRowsHTML(
+        getEventAttendanceRowsHTML(
             attendanceEditingEvent.activityKey,
             attendanceEditingEvent.eventId
-        )
-        : getDailyAttendanceRowsHTML();
+        );
 
 }
 
@@ -5923,6 +6091,24 @@ function getDateFromKey(dateKey) {
 }
 
 
+function formatThaiDate(dateKey) {
+
+    const date =
+        getDateFromKey(dateKey);
+
+    return new Intl.DateTimeFormat(
+        "th-TH",
+        {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        }
+    ).format(date);
+
+}
+
+
 function getDayEventsForDate(
     dateKey,
     activityFilter = [
@@ -5967,68 +6153,6 @@ function getDayEventsForDate(
 }
 
 
-function getDailyAttendanceStatus(
-    dateKey,
-    memberId
-) {
-
-    return guildData
-        .dailyAttendance
-        ?.[dateKey]
-        ?.[memberId]
-        ?.status || "inactive";
-
-}
-
-
-function ensureDailyAttendance(
-    dateKey
-) {
-
-    guildData.dailyAttendance =
-        guildData.dailyAttendance || {};
-
-    if (!guildData.dailyAttendance[dateKey])
-        guildData.dailyAttendance[dateKey] = {};
-
-    return guildData.dailyAttendance[dateKey];
-
-}
-
-
-function getAttendanceCounts(
-    dateKey
-) {
-
-    const attendance =
-        guildData.dailyAttendance
-        ?.[dateKey] || {};
-
-    let active = 0;
-    let inactive = 0;
-
-    (guildData.members || [])
-        .forEach(member => {
-
-            if (
-                attendance?.[member.id]?.status ===
-                "active"
-            ) {
-                active++;
-            } else {
-                inactive++;
-            }
-
-        });
-
-    return {
-        active,
-        inactive
-    };
-
-}
-
-
 window.setAttendanceDate =
 function (dateKey) {
 
@@ -6037,8 +6161,6 @@ function (dateKey) {
 
     attendanceSelectedDate =
         dateKey;
-
-    pendingDailyAttendanceStatus = {};
 
     renderAttendancePage();
 
@@ -6060,169 +6182,104 @@ function (days) {
     attendanceSelectedDate =
         getBangkokDateKey(date);
 
-    pendingDailyAttendanceStatus = {};
-
     renderAttendancePage();
 
 };
 
 
-window.chooseDailyAttendance =
-function (
-    memberId,
-    status
-) {
 
-    if (!isAdmin)
-        return;
+/* =========================================================
+   MEMBERS PAGE
+========================================================= */
 
-    pendingDailyAttendanceStatus[memberId] =
-        status;
+window.setMembersSearch =
+function (value) {
 
-    const wrapper =
-        document.querySelector(
-            `[data-daily-attendance-member="${memberId}"]`
-        );
+    membersSearchText =
+        value || "";
 
-    if (!wrapper)
-        return;
-
-    wrapper
-        .querySelectorAll(
-            ".daily-attendance-choice"
-        )
-        .forEach(button => {
-
-            const active =
-                button.dataset.status ===
-                status;
-
-            button.className =
-                "daily-attendance-choice " +
-                "px-3 py-2 rounded-lg border text-xs " +
-                (
-                    active
-                    ? (
-                        status === "active"
-                        ? "status-present"
-                        : "status-absent"
-                    )
-                    : "bg-slate-900 border-slate-800 text-slate-500"
-                );
-
-        });
-
-    wrapper.dataset.selected =
-        status;
+    renderMembersGrid();
 
 };
 
 
-window.setAllDailyAttendance =
-function (status) {
+window.toggleMemberDiscord =
+function (id) {
 
-    if (!isAdmin)
-        return;
+    if (!isAdmin) return;
 
-    document
-        .querySelectorAll(
-            "[data-daily-attendance-member]"
-        )
-        .forEach(wrapper => {
-
-            chooseDailyAttendance(
-                wrapper.dataset.memberId,
-                status
-            );
-
-        });
-
-};
-
-
-window.saveDailyAttendance =
-function () {
-
-    if (!isAdmin) {
-        alert(
-            "เฉพาะ Admin เท่านั้นที่บันทึก Attendance ได้"
-        );
-        return;
-    }
-
-    const attendance =
-        ensureDailyAttendance(
-            attendanceSelectedDate
+    const member =
+        guildData.members.find(
+            m => m.id === id
         );
 
-    (guildData.members || [])
-        .forEach(member => {
+    if (!member) return;
 
-            const status =
-                pendingDailyAttendanceStatus[member.id] ??
-                getDailyAttendanceStatus(
-                    attendanceSelectedDate,
-                    member.id
-                );
-
-            attendance[member.id] = {
-                status,
-                updatedAt: Date.now()
-            };
-
-        });
+    member.discordJoined =
+        !member.discordJoined;
 
     saveData();
 
-    pendingDailyAttendanceStatus = {};
-
-    renderAttendancePage();
-
-    alert(
-        "บันทึก Attendance วันที่ " +
-        formatThaiDate(attendanceSelectedDate) +
-        " เรียบร้อยแล้ว"
-    );
+    renderMembersGrid();
 
 };
 
 
-function formatThaiDate(dateKey) {
+window.toggleMemberLine =
+function (id) {
 
-    const date =
-        getDateFromKey(dateKey);
+    if (!isAdmin) return;
 
-    return new Intl.DateTimeFormat(
-        "th-TH",
-        {
-            timeZone: "Asia/Bangkok",
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-        }
-    ).format(date);
+    const member =
+        guildData.members.find(
+            m => m.id === id
+        );
 
-}
+    if (!member) return;
+
+    member.lineJoined =
+        !member.lineJoined;
+
+    saveData();
+
+    renderMembersGrid();
+
+};
 
 
-function getDailyAttendanceRowsHTML() {
+function getMembersGridHTML() {
+
+    const search =
+        membersSearchText
+        .trim()
+        .toLowerCase();
 
     const members =
-        getFilteredSortedAttendanceMembers();
+        (guildData.members || [])
+        .filter(member =>
+            !search ||
+            String(member.name || "")
+                .toLowerCase()
+                .includes(search)
+        )
+        .sort((a, b) =>
+            String(a.name || "")
+                .localeCompare(
+                    String(b.name || ""),
+                    "th"
+                )
+        );
 
-    const adminDisabled =
-        isAdmin
-        ? ""
-        : "disabled opacity-50 cursor-not-allowed";
 
     if (!members.length) {
 
         return `
             <div class="
+                col-span-full
                 text-center
                 text-slate-600
-                py-10
+                text-sm
+                py-14
             ">
                 ไม่พบสมาชิกที่ค้นหา
             </div>
@@ -6230,14 +6287,14 @@ function getDailyAttendanceRowsHTML() {
 
     }
 
-    return members.map(member => {
 
-        const status =
-            pendingDailyAttendanceStatus[member.id] ??
-            getDailyAttendanceStatus(
-                attendanceSelectedDate,
-                member.id
-            );
+    const adminDisabled =
+        isAdmin
+        ? ""
+        : "disabled opacity-60 cursor-not-allowed";
+
+
+    return members.map(member => {
 
         const info =
             getClassInfo(
@@ -6251,125 +6308,122 @@ function getDailyAttendanceRowsHTML() {
 
         return `
 
-            <div
-                class="
-                    bg-slate-950
-                    border border-slate-800
-                    rounded-xl
-                    p-3
-                    flex
-                    flex-col
-                    sm:flex-row
-                    sm:items-center
-                    justify-between
-                    gap-3
-                "
-            >
+            <div class="
+                bg-slate-900/80
+                border border-slate-800
+                rounded-2xl
+                p-4
+                flex flex-col items-center
+                text-center
+                gap-1.5
+            ">
+
+                ${getClassLogoHTML(
+                    member.class,
+                    color,
+                    member.classIcon
+                )}
 
                 <div class="
-                    flex
-                    items-center
-                    gap-3
-                    min-w-0
+                    font-semibold
+                    text-sm
+                    truncate
+                    w-full
                 ">
-
-                    ${getClassLogoHTML(
-                        member.class,
-                        color,
-                        member.classIcon
+                    ${escapeHTML(
+                        member.name ||
+                        "Unknown"
                     )}
+                </div>
 
-                    <div class="min-w-0">
+                <div
+                    class="text-xs font-medium"
+                    style="color:${escapeHTML(color)}"
+                >
+                    ${escapeHTML(
+                        member.class ||
+                        "Unknown"
+                    )}
+                </div>
 
-                        <div class="
-                            font-semibold
-                            text-xs
-                            truncate
-                        ">
-                            ${escapeHTML(
-                                member.name ||
-                                "Unknown"
-                            )}
-                        </div>
-
-                        <div
-                            class="text-[10px]"
-                            style="
-                                color:${escapeHTML(color)}
-                            "
-                        >
-                            ${escapeHTML(
-                                member.class ||
-                                "Unknown"
-                            )}
-                        </div>
-
-                    </div>
-
+                <div class="text-xs text-slate-400">
+                    CP ${
+                        Number(
+                            member.cp || 0
+                        ).toLocaleString()
+                    }
                 </div>
 
 
-                <div
-                    class="
-                        grid
-                        grid-cols-2
-                        gap-1
-                        sm:w-[220px]
-                    "
-                    data-daily-attendance-member="${escapeHTML(member.id)}"
-                    data-member-id="${escapeHTML(member.id)}"
-                    data-selected="${status}"
-                >
+                <div class="
+                    w-full
+                    flex
+                    items-center
+                    justify-between
+                    mt-1.5
+                    pt-2
+                    border-t border-slate-800
+                ">
+                    <span class="text-[10px] text-slate-500">
+                        <i class="fa-brands fa-discord"></i>
+                        Discord
+                    </span>
 
                     <button
-                        onclick="chooseDailyAttendance(
-                            '${escapeHTML(member.id)}',
-                            'active'
-                        )"
+                        onclick="toggleMemberDiscord('${escapeHTML(member.id)}')"
                         ${adminDisabled}
-                        data-status="active"
                         class="
-                            daily-attendance-choice
-                            px-3 py-2
-                            rounded-lg
-                            border
+                            w-6 h-6 rounded-full
+                            flex items-center justify-center
                             text-xs
                             ${
-                                status === "active"
-                                ? "status-present"
-                                : "bg-slate-900 border-slate-800 text-slate-500"
+                                member.discordJoined
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-rose-500/20 text-rose-400"
                             }
                         "
                     >
-                        <i class="fa-solid fa-circle-check mr-1"></i>
-                        Active
+                        <i class="fa-solid ${
+                            member.discordJoined
+                            ? "fa-check"
+                            : "fa-xmark"
+                        }"></i>
                     </button>
+                </div>
 
+
+                <div class="
+                    w-full
+                    flex
+                    items-center
+                    justify-between
+                    pt-1.5
+                ">
+                    <span class="text-[10px] text-slate-500">
+                        <i class="fa-brands fa-line"></i>
+                        Line
+                    </span>
 
                     <button
-                        onclick="chooseDailyAttendance(
-                            '${escapeHTML(member.id)}',
-                            'inactive'
-                        )"
+                        onclick="toggleMemberLine('${escapeHTML(member.id)}')"
                         ${adminDisabled}
-                        data-status="inactive"
                         class="
-                            daily-attendance-choice
-                            px-3 py-2
-                            rounded-lg
-                            border
+                            w-6 h-6 rounded-full
+                            flex items-center justify-center
                             text-xs
                             ${
-                                status === "inactive"
-                                ? "status-absent"
-                                : "bg-slate-900 border-slate-800 text-slate-500"
+                                member.lineJoined
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-rose-500/20 text-rose-400"
                             }
                         "
                     >
-                        <i class="fa-solid fa-circle-xmark mr-1"></i>
-                        Inactive
+                        <i class="fa-solid ${
+                            member.lineJoined
+                            ? "fa-check"
+                            : "fa-xmark"
+                        }"></i>
                     </button>
-
                 </div>
 
             </div>
@@ -6377,6 +6431,100 @@ function getDailyAttendanceRowsHTML() {
         `;
 
     }).join("");
+
+}
+
+
+function renderMembersGrid() {
+
+    const grid =
+        document.getElementById(
+            "members-grid"
+        );
+
+    if (!grid) return;
+
+    grid.innerHTML =
+        getMembersGridHTML();
+
+}
+
+
+function renderMembersPage() {
+
+    const container =
+        document.getElementById(
+            "members-container"
+        );
+
+    if (!container) return;
+
+
+    const total =
+        (guildData.members || []).length;
+
+
+    container.innerHTML = `
+
+        <div class="
+            bg-slate-900/80
+            border border-slate-800
+            rounded-2xl
+            p-5
+            mb-5
+        ">
+
+            <div class="
+                flex
+                flex-col
+                sm:flex-row
+                sm:items-center
+                justify-between
+                gap-3
+                mb-4
+            ">
+
+                <div>
+                    <h2 class="text-xl font-bold">
+                        <i class="fa-solid fa-address-card text-sky-400 mr-2"></i>
+                        Members
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        เช็ค CP, สถานะ Discord และ Line ของสมาชิกทั้งหมด (${total} คน)
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
+                <input
+                    type="text"
+                    placeholder="ค้นหาชื่อสมาชิก..."
+                    value="${escapeHTML(membersSearchText)}"
+                    oninput="setMembersSearch(this.value)"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2.5 text-sm outline-none focus:border-sky-500"
+                >
+            </div>
+
+        </div>
+
+
+        <div
+            id="members-grid"
+            class="
+                grid
+                grid-cols-2
+                sm:grid-cols-3
+                lg:grid-cols-4
+                xl:grid-cols-6
+                gap-3
+            "
+        >
+            ${getMembersGridHTML()}
+        </div>
+
+    `;
 
 }
 
@@ -6393,11 +6541,6 @@ function renderAttendancePage() {
 
     const events =
         getDayEventsForDate(
-            attendanceSelectedDate
-        );
-
-    const counts =
-        getAttendanceCounts(
             attendanceSelectedDate
         );
 
@@ -6433,7 +6576,7 @@ function renderAttendancePage() {
                             text-slate-500
                             mb-1
                         ">
-                            Daily Attendance
+                            Attendance
                         </div>
 
                         <h2 class="
@@ -6450,8 +6593,7 @@ function renderAttendancePage() {
                             text-slate-500
                             mt-1
                         ">
-                            บันทึกแค่ว่า Active / Inactive
-                            ของสมาชิกในวันนั้น
+                            กดเลือกกิจกรรมด้านล่างเพื่อบันทึก Attendance
                         </p>
 
                     </div>
@@ -6517,50 +6659,9 @@ function renderAttendancePage() {
                 <div class="
                     grid
                     grid-cols-2
-                    md:grid-cols-4
                     gap-3
                     mt-5
                 ">
-
-                    <div class="
-                        bg-emerald-900/20
-                        border border-emerald-500/20
-                        rounded-xl
-                        p-4
-                    ">
-                        <div class="text-xs text-slate-500">
-                            Active
-                        </div>
-                        <div class="
-                            text-2xl
-                            font-bold
-                            text-emerald-400
-                            mt-1
-                        ">
-                            ${counts.active}
-                        </div>
-                    </div>
-
-
-                    <div class="
-                        bg-rose-900/20
-                        border border-rose-500/20
-                        rounded-xl
-                        p-4
-                    ">
-                        <div class="text-xs text-slate-500">
-                            Inactive
-                        </div>
-                        <div class="
-                            text-2xl
-                            font-bold
-                            text-rose-400
-                            mt-1
-                        ">
-                            ${counts.inactive}
-                        </div>
-                    </div>
-
 
                     <div class="
                         bg-sky-900/20
@@ -6901,137 +7002,17 @@ function renderAttendancePage() {
                     : `
 
                         <div class="
-                            flex
-                            flex-col
-                            md:flex-row
-                            md:items-center
-                            justify-between
-                            gap-3
-                            mb-4
+                            text-center
+                            text-slate-600
+                            text-sm
+                            py-14
                         ">
-
-                            <div>
-                                <h3 class="font-bold">
-                                    <i class="fa-solid fa-users text-purple-400 mr-2"></i>
-                                    รายชื่อสมาชิก
-                                </h3>
-
-                                <p class="text-[11px] text-slate-500 mt-1">
-                                    ${
-                                        isAdmin
-                                        ? "กด Active / Inactive แล้วกด Save ได้ และกลับมาแก้วันเดิมได้ตลอด"
-                                        : "ดูสถานะ Attendance ได้ แต่ต้องเข้าสู่ระบบ Admin เพื่อแก้ไข"
-                                    }
-                                </p>
-                            </div>
-
-
-                            <div class="flex flex-wrap gap-2">
-
-                                <button
-                                    onclick="setAllDailyAttendance('active')"
-                                    ${adminDisabled}
-                                    class="
-                                        px-3
-                                        py-2
-                                        rounded-lg
-                                        bg-emerald-600/20
-                                        text-emerald-300
-                                        text-xs
-                                    "
-                                >
-                                    ทั้งหมด Active
-                                </button>
-
-                                <button
-                                    onclick="setAllDailyAttendance('inactive')"
-                                    ${adminDisabled}
-                                    class="
-                                        px-3
-                                        py-2
-                                        rounded-lg
-                                        bg-rose-600/20
-                                        text-rose-300
-                                        text-xs
-                                    "
-                                >
-                                    ทั้งหมด Inactive
-                                </button>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="
-                            flex
-                            flex-col
-                            sm:flex-row
-                            gap-2
-                            mb-3
-                        ">
-
-                            <div class="relative flex-1">
-                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
-                                <input
-                                    type="text"
-                                    placeholder="ค้นหาชื่อสมาชิก..."
-                                    value="${escapeHTML(attendanceSearchText)}"
-                                    oninput="setAttendanceSearch(this.value)"
-                                    class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-purple-500"
-                                >
-                            </div>
-
-                            <select
-                                onchange="setAttendanceSort(this.value)"
-                                class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-300 outline-none focus:border-purple-500"
-                            >
-                                <option value="name-asc" ${attendanceSortMode === "name-asc" ? "selected" : ""}>ชื่อ A-Z</option>
-                                <option value="name-desc" ${attendanceSortMode === "name-desc" ? "selected" : ""}>ชื่อ Z-A</option>
-                                <option value="class-asc" ${attendanceSortMode === "class-asc" ? "selected" : ""}>อาชีพ A-Z</option>
-                            </select>
-
-                        </div>
-
-
-                        <div
-                            id="attendance-member-rows"
-                            class="
-                            space-y-2
-                            max-h-[60vh]
-                            overflow-y-auto
-                            custom-scrollbar
-                            pr-1
-                        ">
-                            ${getDailyAttendanceRowsHTML()}
-                        </div>
-
-
-                        <div class="
-                            flex
-                            justify-end
-                            mt-5
-                            pt-4
-                            border-t border-slate-800
-                        ">
-
-                            <button
-                                onclick="saveDailyAttendance()"
-                                ${adminDisabled}
-                                class="
-                                    px-5
-                                    py-2.5
-                                    rounded-lg
-                                    bg-emerald-600
-                                    hover:bg-emerald-500
-                                    text-sm
-                                    font-medium
-                                "
-                            >
-                                <i class="fa-solid fa-floppy-disk mr-1"></i>
-                                Save Attendance
-                            </button>
-
+                            <i class="fa-solid fa-clipboard-list text-2xl mb-3 block"></i>
+                            ${
+                                events.length
+                                ? "เลือกกิจกรรมด้านบนเพื่อบันทึก Attendance"
+                                : "วันนี้ไม่มีกิจกรรม Guild League หรือ ศึกชิงปราสาท"
+                            }
                         </div>
 
                     `
@@ -7531,59 +7512,6 @@ function renderAnalyticsMiniCalendar() {
                         </div>
                     `
                 }
-
-                <div class="
-                    grid
-                    grid-cols-2
-                    gap-2
-                    mt-3
-                ">
-
-                    <div class="
-                        rounded-lg
-                        bg-emerald-900/20
-                        p-3
-                        text-center
-                    ">
-                        <div class="
-                            text-lg
-                            font-bold
-                            text-emerald-400
-                        ">
-                            ${
-                                getAttendanceCounts(
-                                    selected
-                                ).active
-                            }
-                        </div>
-                        <div class="text-[10px] text-slate-500">
-                            Active
-                        </div>
-                    </div>
-
-                    <div class="
-                        rounded-lg
-                        bg-rose-900/20
-                        p-3
-                        text-center
-                    ">
-                        <div class="
-                            text-lg
-                            font-bold
-                            text-rose-400
-                        ">
-                            ${
-                                getAttendanceCounts(
-                                    selected
-                                ).inactive
-                            }
-                        </div>
-                        <div class="text-[10px] text-slate-500">
-                            Inactive
-                        </div>
-                    </div>
-
-                </div>
 
             </div>
 
@@ -8555,6 +8483,10 @@ function renderApp() {
         guildData.currentActivity ===
         "analytics";
 
+    const isMembers =
+        guildData.currentActivity ===
+        "members";
+
 
     const layout =
         document.getElementById(
@@ -8574,6 +8506,12 @@ function renderApp() {
         );
 
 
+    const members =
+        document.getElementById(
+            "members-container"
+        );
+
+
     if (isAttendance) {
 
         layout.classList.add("hidden");
@@ -8581,6 +8519,8 @@ function renderApp() {
         attendance.classList.remove("hidden");
 
         analytics.classList.add("hidden");
+
+        members.classList.add("hidden");
 
         renderAttendancePage();
 
@@ -8592,7 +8532,21 @@ function renderApp() {
 
         analytics.classList.remove("hidden");
 
+        members.classList.add("hidden");
+
         renderAnalytics();
+
+    } else if (isMembers) {
+
+        layout.classList.add("hidden");
+
+        attendance.classList.add("hidden");
+
+        analytics.classList.add("hidden");
+
+        members.classList.remove("hidden");
+
+        renderMembersPage();
 
     } else {
 
@@ -8601,6 +8555,8 @@ function renderApp() {
         attendance.classList.add("hidden");
 
         analytics.classList.add("hidden");
+
+        members.classList.add("hidden");
 
         renderUnassignedPool();
 
@@ -8676,6 +8632,33 @@ onValue(
 
             guildData.settings =
                 guildData.settings || {};
+
+
+            if (guildData.settings.sheetURL) {
+
+                GOOGLE_SHEET_URL =
+                    guildData.settings.sheetURL;
+
+            } else {
+
+                const legacyUrl =
+                    localStorage.getItem(
+                        "googleSheetURLBBM"
+                    );
+
+                if (legacyUrl) {
+
+                    GOOGLE_SHEET_URL =
+                        legacyUrl;
+
+                    guildData.settings.sheetURL =
+                        legacyUrl;
+
+                    saveData();
+
+                }
+
+            }
 
 
             guildData.dailyAttendance =

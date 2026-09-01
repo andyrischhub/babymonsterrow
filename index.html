@@ -499,6 +499,7 @@ Analytics
 <!-- MEMBER POOL -->
 
 <aside
+id="member-pool-aside"
 class="lg:col-span-1
        bg-slate-900/80
        border border-slate-800
@@ -537,10 +538,15 @@ class="lg:col-span-1
 
 </p>
 
+<div class="lg:hidden flex items-center gap-1.5 mb-2 text-[11px] text-slate-500">
+    <span>แสดง:</span>
+    <div id="pool-count-buttons" class="flex gap-1"></div>
+</div>
+
 <!-- MEMBER FILTER / SORT -->
 <button
     type="button"
-    onclick="document.getElementById('member-filter-panel').classList.toggle('hidden')"
+    onclick="document.getElementById('member-filter-panel').classList.toggle('hidden'); applyPoolHeight();"
     class="lg:hidden w-full flex items-center justify-between
            px-3 py-2 mb-2 rounded-lg
            bg-slate-800/60 border border-slate-700
@@ -1032,6 +1038,9 @@ let pendingAttendanceStatus = {};
 let attendanceSearchText = "";
 let attendanceSortMode = "name-asc";
 let membersSearchText = "";
+let membersSortMode = "name-asc";
+let membersShowLeft = false;
+let poolVisibleCount = 10;
 
 
 /* =========================================================
@@ -1521,7 +1530,9 @@ function () {
         );
 
     input.value =
-        GOOGLE_SHEET_URL;
+        guildData.settings?.sheetURL ||
+        GOOGLE_SHEET_URL ||
+        "";
 
     modal.classList.remove("hidden");
     modal.classList.add("flex");
@@ -1748,6 +1759,7 @@ async function () {
 
         let imported = 0;
         let updated = 0;
+        const seenSheetNames = new Set();
 
 
         rows.forEach(
@@ -1833,6 +1845,11 @@ async function () {
 
                 if (!name)
                     return;
+
+
+                seenSheetNames.add(
+                    name.toLowerCase()
+                );
 
 
                 /*
@@ -2068,6 +2085,53 @@ const classInfo =
         );
 
 
+        let markedLeft = 0;
+
+        guildData.members.forEach(member => {
+
+            if (member.leftGuild)
+                return;
+
+            const nameKey =
+                String(member.name || "")
+                .trim()
+                .toLowerCase();
+
+            if (seenSheetNames.has(nameKey))
+                return;
+
+
+            member.leftGuild = true;
+
+            markedLeft++;
+
+
+            Object.values(
+                guildData.activities || {}
+            ).forEach(activity => {
+
+                (activity.groups || [])
+                    .forEach(group => {
+
+                        (group.parties || [])
+                            .forEach(party => {
+
+                                party.members =
+                                    (party.members || [])
+                                    .filter(
+                                        m =>
+                                            m.id !== member.id
+                                    );
+
+                            });
+
+                    });
+
+            });
+
+        });
+
+
         rebuildClassList();
 
         saveData();
@@ -2077,7 +2141,13 @@ const classInfo =
 
         showSheetStatus(
 
-            `Sync สำเร็จ · เพิ่ม ${imported} คน · อัปเดต ${updated} คน · พบ ${Object.keys(classMaster).length} อาชีพ`,
+            `Sync สำเร็จ · เพิ่ม ${imported} คน · อัปเดต ${updated} คน` +
+            (
+                markedLeft
+                ? ` · ออกจากกิล ${markedLeft} คน`
+                : ""
+            ) +
+            ` · พบ ${Object.keys(classMaster).length} อาชีพ`,
 
             true
 
@@ -2779,8 +2849,8 @@ function buildExportNode(
                         document.createElement("div");
 
                     row.style.cssText =
-                        "display:flex;justify-content:space-between;" +
-                        "gap:6px;font-size:11px;padding:3px 2px;" +
+                        "padding:3px 2px;" +
+                        "border-bottom:1px solid #1e293b33;" +
                         (
                             member
                             ? "color:#e2e8f0;"
@@ -2788,19 +2858,29 @@ function buildExportNode(
                         );
 
 
+                    const topLine =
+                        document.createElement("div");
+
+                    topLine.style.cssText =
+                        "display:flex;justify-content:space-between;" +
+                        "align-items:baseline;gap:6px;font-size:11px;";
+
+
                     const nameSpan =
                         document.createElement("span");
 
                     nameSpan.style.cssText =
+                        "flex:1 1 auto;min-width:0;" +
                         "overflow:hidden;text-overflow:ellipsis;" +
-                        "white-space:nowrap;font-weight:600;";
+                        "white-space:nowrap;font-weight:600;" +
+                        "display:block;";
 
                     nameSpan.textContent =
                         member
                         ? (member.name || "-")
                         : "ว่าง";
 
-                    row.appendChild(nameSpan);
+                    topLine.appendChild(nameSpan);
 
 
                     if (member) {
@@ -2809,7 +2889,8 @@ function buildExportNode(
                             document.createElement("span");
 
                         cpSpan.style.cssText =
-                            "color:#7dd3fc;white-space:nowrap;";
+                            "color:#7dd3fc;white-space:nowrap;" +
+                            "flex-shrink:0;font-size:10px;";
 
                         cpSpan.textContent =
                             member.cp
@@ -2817,7 +2898,38 @@ function buildExportNode(
                                 .toLocaleString()
                             : "";
 
-                        row.appendChild(cpSpan);
+                        topLine.appendChild(cpSpan);
+
+                    }
+
+                    row.appendChild(topLine);
+
+
+                    if (member) {
+
+                        const classInfo =
+                            getClassInfo(
+                                member.class
+                            );
+
+                        const classColor =
+                            member.classColor ||
+                            classInfo.color ||
+                            "#94a3b8";
+
+                        const classSpan =
+                            document.createElement("div");
+
+                        classSpan.style.cssText =
+                            "font-size:9px;font-weight:600;" +
+                            "overflow:hidden;text-overflow:ellipsis;" +
+                            "white-space:nowrap;color:" +
+                            classColor + ";";
+
+                        classSpan.textContent =
+                            member.class || "";
+
+                        row.appendChild(classSpan);
 
                     }
 
@@ -3391,8 +3503,16 @@ function getUnassignedMembers() {
         ?.[guildData.currentActivity];
 
 
+    const activeMembers =
+        (guildData.members || [])
+        .filter(
+            member =>
+                !member.leftGuild
+        );
+
+
     if (!activity)
-        return guildData.members || [];
+        return activeMembers;
 
 
     const assigned =
@@ -3419,7 +3539,7 @@ function getUnassignedMembers() {
         });
 
 
-    return (guildData.members || [])
+    return activeMembers
         .filter(
             member =>
                 !assigned.has(
@@ -3567,6 +3687,80 @@ function getFilteredSortedMemberPool(members) {
     return result;
 }
 
+window.setPoolVisibleCount =
+function (n) {
+
+    poolVisibleCount =
+        Number(n) || 10;
+
+    renderPoolCountButtons();
+
+    applyPoolHeight();
+
+};
+
+
+function renderPoolCountButtons() {
+
+    const wrap =
+        document.getElementById(
+            "pool-count-buttons"
+        );
+
+    if (!wrap) return;
+
+    wrap.innerHTML =
+        [5, 10, 15, 20]
+        .map(n => `
+            <button
+                onclick="setPoolVisibleCount(${n})"
+                class="
+                    px-2 py-0.5 rounded
+                    ${
+                        poolVisibleCount === n
+                        ? "bg-purple-600 text-white"
+                        : "bg-slate-800 text-slate-400"
+                    }
+                "
+            >${n}</button>
+        `).join("");
+
+}
+
+
+window.applyPoolHeight =
+function applyPoolHeight() {
+
+    const aside =
+        document.getElementById(
+            "member-pool-aside"
+        );
+
+    if (!aside) return;
+
+    if (window.innerWidth >= 1024)
+        return;
+
+    const cardHeight = 72;
+
+    const chromeHeight =
+        document.getElementById(
+            "member-filter-panel"
+        )?.classList.contains("hidden")
+        ? 125
+        : 320;
+
+    const targetHeight =
+        chromeHeight +
+        poolVisibleCount * cardHeight;
+
+    aside.style.height =
+        Math.min(targetHeight, window.innerHeight * 0.95) +
+        "px";
+
+}
+
+
 function renderUnassignedPool() {
     const pool =
         document.getElementById("unassigned-pool");
@@ -3575,6 +3769,10 @@ function renderUnassignedPool() {
         document.getElementById("unassigned-count");
 
     if (!pool || !count) return;
+
+    renderPoolCountButtons();
+
+    applyPoolHeight();
 
     const members =
         getUnassignedMembers();
@@ -4929,12 +5127,102 @@ function (id) {
 
     if (
         !confirm(
-            "ต้องการลบ \"" +
+            "ทำเครื่องหมายว่า \"" +
             (member.name || "สมาชิกนี้") +
-            "\" ออกจากระบบทั้งหมดใช่หรือไม่?\n\n" +
-            "จะถูกเอาออกจากคลังรายชื่อ, Party, " +
+            "\" ออกจากกิลด์ใช่หรือไม่?\n\n" +
+            "จะถูกเอาออกจาก Party และไม่แสดงในคลังรายชื่อ/" +
+            "รายการ Attendance รอบถัดไป\n" +
+            "แต่ประวัติ Attendance และ Analytics เดิมจะยังอยู่ครบ " +
+            "(กู้คืนได้ภายหลังในหน้า Members)"
+        )
+    )
+        return;
+
+
+    member.leftGuild = true;
+
+
+    Object.values(
+        guildData.activities || {}
+    ).forEach(activity => {
+
+        (activity.groups || [])
+            .forEach(group => {
+
+                (group.parties || [])
+                    .forEach(party => {
+
+                        party.members =
+                            (party.members || [])
+                            .filter(
+                                m =>
+                                    m.id !== id
+                            );
+
+                    });
+
+            });
+
+    });
+
+
+    saveData();
+
+    renderGroups();
+
+    renderUnassignedPool();
+
+};
+
+
+window.restoreMember =
+function (id) {
+
+    if (!isAdmin) return;
+
+
+    const member =
+        guildData.members.find(
+            m =>
+                m.id === id
+        );
+
+    if (!member) return;
+
+
+    member.leftGuild = false;
+
+
+    saveData();
+
+    renderMembersPage();
+
+};
+
+
+window.permanentlyDeleteMember =
+function (id) {
+
+    if (!isAdmin) return;
+
+
+    const member =
+        guildData.members.find(
+            m =>
+                m.id === id
+        );
+
+    if (!member) return;
+
+
+    if (
+        !confirm(
+            "ลบ \"" +
+            (member.name || "สมาชิกนี้") +
+            "\" ออกจากระบบถาวรใช่หรือไม่?\n\n" +
+            "จะถูกลบออกจากคลังรายชื่อ, Party, " +
             "Attendance และ Analytics ทั้งหมด " +
-            "และไม่สามารถกู้คืนได้"
+            "รวมถึงประวัติเก่าด้วย และไม่สามารถกู้คืนได้"
         )
     )
         return;
@@ -4990,6 +5278,8 @@ function (id) {
 
 
     saveData();
+
+    renderMembersPage();
 
     renderGroups();
 
@@ -5547,10 +5837,13 @@ function getFilteredSortedAttendanceMembers() {
     let members =
         (guildData.members || [])
         .filter(member =>
-            !search ||
-            String(member.name || "")
-                .toLowerCase()
-                .includes(search)
+            !member.leftGuild &&
+            (
+                !search ||
+                String(member.name || "")
+                    .toLowerCase()
+                    .includes(search)
+            )
         );
 
     if (attendanceSortMode === "name-asc") {
@@ -6198,7 +6491,29 @@ function (value) {
     membersSearchText =
         value || "";
 
-    renderMembersGrid();
+    renderMembersTable();
+
+};
+
+
+window.setMembersSort =
+function (value) {
+
+    membersSortMode =
+        value || "name-asc";
+
+    renderMembersTable();
+
+};
+
+
+window.toggleMembersShowLeft =
+function () {
+
+    membersShowLeft =
+        !membersShowLeft;
+
+    renderMembersPage();
 
 };
 
@@ -6220,7 +6535,7 @@ function (id) {
 
     saveData();
 
-    renderMembersGrid();
+    renderMembersTable();
 
 };
 
@@ -6242,27 +6557,36 @@ function (id) {
 
     saveData();
 
-    renderMembersGrid();
+    renderMembersTable();
 
 };
 
 
-function getMembersGridHTML() {
+function getMembersTableHTML() {
 
     const search =
         membersSearchText
         .trim()
         .toLowerCase();
 
-    const members =
+    let members =
         (guildData.members || [])
         .filter(member =>
-            !search ||
-            String(member.name || "")
-                .toLowerCase()
-                .includes(search)
-        )
-        .sort((a, b) =>
+            (
+                membersShowLeft ||
+                !member.leftGuild
+            ) &&
+            (
+                !search ||
+                String(member.name || "")
+                    .toLowerCase()
+                    .includes(search)
+            )
+        );
+
+    if (membersSortMode === "name-asc") {
+
+        members.sort((a, b) =>
             String(a.name || "")
                 .localeCompare(
                     String(b.name || ""),
@@ -6270,19 +6594,56 @@ function getMembersGridHTML() {
                 )
         );
 
+    } else if (membersSortMode === "name-desc") {
+
+        members.sort((a, b) =>
+            String(b.name || "")
+                .localeCompare(
+                    String(a.name || ""),
+                    "th"
+                )
+        );
+
+    } else if (membersSortMode === "class-asc") {
+
+        members.sort((a, b) =>
+            String(a.class || "")
+                .localeCompare(
+                    String(b.class || ""),
+                    "th"
+                )
+        );
+
+    } else if (membersSortMode === "cp-desc") {
+
+        members.sort((a, b) =>
+            Number(b.cp || 0) -
+            Number(a.cp || 0)
+        );
+
+    } else if (membersSortMode === "cp-asc") {
+
+        members.sort((a, b) =>
+            Number(a.cp || 0) -
+            Number(b.cp || 0)
+        );
+
+    }
+
 
     if (!members.length) {
 
         return `
-            <div class="
-                col-span-full
-                text-center
-                text-slate-600
-                text-sm
-                py-14
-            ">
-                ไม่พบสมาชิกที่ค้นหา
-            </div>
+            <tr>
+                <td colspan="8" class="
+                    text-center
+                    text-slate-600
+                    text-sm
+                    py-14
+                ">
+                    ไม่พบสมาชิกที่ค้นหา
+                </td>
+            </tr>
         `;
 
     }
@@ -6294,7 +6655,7 @@ function getMembersGridHTML() {
         : "disabled opacity-60 cursor-not-allowed";
 
 
-    return members.map(member => {
+    return members.map((member, index) => {
 
         const info =
             getClassInfo(
@@ -6308,125 +6669,155 @@ function getMembersGridHTML() {
 
         return `
 
-            <div class="
-                bg-slate-900/80
-                border border-slate-800
-                rounded-2xl
-                p-4
-                flex flex-col items-center
-                text-center
-                gap-1.5
+            <tr class="
+                border-b border-slate-800/60
+                hover:bg-slate-800/30
+                ${
+                    member.leftGuild
+                    ? "opacity-50"
+                    : ""
+                }
             ">
 
-                ${getClassLogoHTML(
-                    member.class,
-                    color,
-                    member.classIcon
-                )}
+                <td class="p-2.5 text-slate-500 text-xs text-center">
+                    ${index + 1}
+                </td>
 
-                <div class="
-                    font-semibold
-                    text-sm
-                    truncate
-                    w-full
-                ">
+                <td class="p-2.5">
+                    <div class="flex items-center justify-center">
+                        ${getClassLogoHTML(
+                            member.class,
+                            color,
+                            member.classIcon
+                        )}
+                    </div>
+                </td>
+
+                <td class="p-2.5 font-semibold text-sm">
                     ${escapeHTML(
                         member.name ||
                         "Unknown"
                     )}
-                </div>
+                    ${
+                        member.leftGuild
+                        ? `<span class="ml-1 text-[9px] font-normal px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">ออกจากกิล</span>`
+                        : ""
+                    }
+                </td>
 
-                <div
-                    class="text-xs font-medium"
+                <td
+                    class="p-2.5 text-sm font-medium"
                     style="color:${escapeHTML(color)}"
                 >
                     ${escapeHTML(
                         member.class ||
                         "Unknown"
                     )}
-                </div>
+                </td>
 
-                <div class="text-xs text-slate-400">
-                    CP ${
+                <td class="p-2.5 text-sm text-slate-300">
+                    ${
                         Number(
                             member.cp || 0
                         ).toLocaleString()
                     }
-                </div>
+                </td>
 
-
-                <div class="
-                    w-full
-                    flex
-                    items-center
-                    justify-between
-                    mt-1.5
-                    pt-2
-                    border-t border-slate-800
-                ">
-                    <span class="text-[10px] text-slate-500">
-                        <i class="fa-brands fa-discord"></i>
-                        Discord
-                    </span>
-
-                    <button
-                        onclick="toggleMemberDiscord('${escapeHTML(member.id)}')"
-                        ${adminDisabled}
-                        class="
-                            w-6 h-6 rounded-full
-                            flex items-center justify-center
-                            text-xs
-                            ${
+                <td class="p-2.5">
+                    <div class="flex justify-center">
+                        <button
+                            onclick="toggleMemberDiscord('${escapeHTML(member.id)}')"
+                            ${adminDisabled}
+                            class="
+                                w-6 h-6 rounded-full
+                                flex items-center justify-center
+                                text-xs
+                                ${
+                                    member.discordJoined
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "bg-rose-500/20 text-rose-400"
+                                }
+                            "
+                        >
+                            <i class="fa-solid ${
                                 member.discordJoined
-                                ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-rose-500/20 text-rose-400"
-                            }
-                        "
-                    >
-                        <i class="fa-solid ${
-                            member.discordJoined
-                            ? "fa-check"
-                            : "fa-xmark"
-                        }"></i>
-                    </button>
-                </div>
+                                ? "fa-check"
+                                : "fa-xmark"
+                            }"></i>
+                        </button>
+                    </div>
+                </td>
 
-
-                <div class="
-                    w-full
-                    flex
-                    items-center
-                    justify-between
-                    pt-1.5
-                ">
-                    <span class="text-[10px] text-slate-500">
-                        <i class="fa-brands fa-line"></i>
-                        Line
-                    </span>
-
-                    <button
-                        onclick="toggleMemberLine('${escapeHTML(member.id)}')"
-                        ${adminDisabled}
-                        class="
-                            w-6 h-6 rounded-full
-                            flex items-center justify-center
-                            text-xs
-                            ${
+                <td class="p-2.5">
+                    <div class="flex justify-center">
+                        <button
+                            onclick="toggleMemberLine('${escapeHTML(member.id)}')"
+                            ${adminDisabled}
+                            class="
+                                w-6 h-6 rounded-full
+                                flex items-center justify-center
+                                text-xs
+                                ${
+                                    member.lineJoined
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "bg-rose-500/20 text-rose-400"
+                                }
+                            "
+                        >
+                            <i class="fa-solid ${
                                 member.lineJoined
-                                ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-rose-500/20 text-rose-400"
-                            }
-                        "
-                    >
-                        <i class="fa-solid ${
-                            member.lineJoined
-                            ? "fa-check"
-                            : "fa-xmark"
-                        }"></i>
-                    </button>
-                </div>
+                                ? "fa-check"
+                                : "fa-xmark"
+                            }"></i>
+                        </button>
+                    </div>
+                </td>
 
-            </div>
+                <td class="p-2.5">
+                    ${
+                        !isAdmin
+                        ? ""
+                        : member.leftGuild
+                        ? `
+                            <div class="flex gap-1 justify-center">
+                                <button
+                                    onclick="restoreMember('${escapeHTML(member.id)}')"
+                                    title="กู้คืน (กลับเข้ากิลด์)"
+                                    class="p-1.5 text-slate-500 hover:text-emerald-400"
+                                >
+                                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                                </button>
+                                <button
+                                    onclick="permanentlyDeleteMember('${escapeHTML(member.id)}')"
+                                    title="ลบถาวร (รวมประวัติ)"
+                                    class="p-1.5 text-slate-500 hover:text-rose-400"
+                                >
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        `
+                        : `
+                            <div class="flex gap-1 justify-center">
+                                <button
+                                    onclick="openEditMember('${escapeHTML(member.id)}')"
+                                    title="แก้ไข"
+                                    class="p-1.5 text-slate-500 hover:text-sky-400"
+                                >
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button
+                                    onclick="deleteMember('${escapeHTML(member.id)}')"
+                                    title="ทำเครื่องหมายว่าออกจากกิลด์"
+                                    class="p-1.5 text-slate-500 hover:text-rose-400"
+                                >
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        `
+                    }
+                </td>
+
+            </tr>
 
         `;
 
@@ -6435,17 +6826,73 @@ function getMembersGridHTML() {
 }
 
 
-function renderMembersGrid() {
+function renderMembersTable() {
 
-    const grid =
+    const tbody =
         document.getElementById(
-            "members-grid"
+            "members-tbody"
         );
 
-    if (!grid) return;
+    if (!tbody) return;
 
-    grid.innerHTML =
-        getMembersGridHTML();
+    tbody.innerHTML =
+        getMembersTableHTML();
+
+}
+
+
+function getMembersClassSummaryHTML() {
+
+    const activeMembers =
+        (guildData.members || [])
+        .filter(m => !m.leftGuild);
+
+    const counts = {};
+
+    activeMembers.forEach(member => {
+
+        const cls =
+            member.class ||
+            "Unknown";
+
+        counts[cls] =
+            (counts[cls] || 0) + 1;
+
+    });
+
+    const classNames =
+        Object.keys(counts)
+        .sort((a, b) =>
+            a.localeCompare(b, "th")
+        );
+
+    return classNames.map(cls => {
+
+        const info =
+            getClassInfo(cls);
+
+        const color =
+            info.color || "#475569";
+
+        return `
+            <div class="
+                flex items-center gap-1.5
+                bg-slate-950
+                border border-slate-800
+                rounded-full
+                pl-1 pr-3 py-1
+            ">
+                ${getClassLogoHTML(cls, color, info.icon)}
+                <span class="text-xs" style="color:${escapeHTML(color)}">
+                    ${escapeHTML(cls)}
+                </span>
+                <span class="text-xs text-slate-400 font-semibold">
+                    ${counts[cls]}
+                </span>
+            </div>
+        `;
+
+    }).join("");
 
 }
 
@@ -6460,8 +6907,13 @@ function renderMembersPage() {
     if (!container) return;
 
 
-    const total =
-        (guildData.members || []).length;
+    const activeCount =
+        (guildData.members || [])
+        .filter(m => !m.leftGuild).length;
+
+    const leftCount =
+        (guildData.members || [])
+        .filter(m => m.leftGuild).length;
 
 
     container.innerHTML = `
@@ -6490,38 +6942,94 @@ function renderMembersPage() {
                         Members
                     </h2>
                     <p class="text-xs text-slate-500 mt-1">
-                        เช็ค CP, สถานะ Discord และ Line ของสมาชิกทั้งหมด (${total} คน)
+                        Total Members: ${activeCount} คน
+                        ${
+                            leftCount
+                            ? ` · ออกจากกิลแล้ว ${leftCount} คน`
+                            : ""
+                        }
                     </p>
                 </div>
 
+                <label class="
+                    flex items-center gap-2
+                    text-xs text-slate-400
+                    cursor-pointer
+                ">
+                    <input
+                        type="checkbox"
+                        onchange="toggleMembersShowLeft()"
+                        ${membersShowLeft ? "checked" : ""}
+                        class="accent-sky-500 w-4 h-4"
+                    >
+                    แสดงคนที่ออกกิลด้วย
+                </label>
+
             </div>
 
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
-                <input
-                    type="text"
-                    placeholder="ค้นหาชื่อสมาชิก..."
-                    value="${escapeHTML(membersSearchText)}"
-                    oninput="setMembersSearch(this.value)"
-                    class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2.5 text-sm outline-none focus:border-sky-500"
+
+            <div class="flex flex-wrap gap-2 mb-4">
+                ${getMembersClassSummaryHTML()}
+            </div>
+
+
+            <div class="flex flex-col sm:flex-row gap-2">
+
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
+                    <input
+                        type="text"
+                        placeholder="ค้นหาชื่อสมาชิก..."
+                        value="${escapeHTML(membersSearchText)}"
+                        oninput="setMembersSearch(this.value)"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2.5 text-sm outline-none focus:border-sky-500"
+                    >
+                </div>
+
+                <select
+                    onchange="setMembersSort(this.value)"
+                    class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-300 outline-none focus:border-sky-500"
                 >
+                    <option value="name-asc" ${membersSortMode === "name-asc" ? "selected" : ""}>ชื่อ A-Z</option>
+                    <option value="name-desc" ${membersSortMode === "name-desc" ? "selected" : ""}>ชื่อ Z-A</option>
+                    <option value="class-asc" ${membersSortMode === "class-asc" ? "selected" : ""}>อาชีพ A-Z</option>
+                    <option value="cp-desc" ${membersSortMode === "cp-desc" ? "selected" : ""}>CP มาก \u2192 น้อย</option>
+                    <option value="cp-asc" ${membersSortMode === "cp-asc" ? "selected" : ""}>CP น้อย \u2192 มาก</option>
+                </select>
+
             </div>
 
         </div>
 
 
-        <div
-            id="members-grid"
-            class="
-                grid
-                grid-cols-2
-                sm:grid-cols-3
-                lg:grid-cols-4
-                xl:grid-cols-6
-                gap-3
-            "
-        >
-            ${getMembersGridHTML()}
+        <div class="
+            bg-slate-900/80
+            border border-slate-800
+            rounded-2xl
+            overflow-x-auto
+        ">
+            <table class="w-full text-left border-collapse min-w-[640px]">
+                <thead>
+                    <tr class="
+                        text-[11px]
+                        text-slate-500
+                        uppercase
+                        border-b border-slate-800
+                    ">
+                        <th class="p-2.5 text-center">#</th>
+                        <th class="p-2.5 text-center">อาชีพ</th>
+                        <th class="p-2.5">ชื่อ</th>
+                        <th class="p-2.5">Class</th>
+                        <th class="p-2.5">CP</th>
+                        <th class="p-2.5 text-center">Discord</th>
+                        <th class="p-2.5 text-center">Line</th>
+                        <th class="p-2.5 text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="members-tbody">
+                    ${getMembersTableHTML()}
+                </tbody>
+            </table>
         </div>
 
     `;
@@ -7737,9 +8245,6 @@ function renderAnalytics() {
 
                         ${
                             getActivityEvents(
-                                "polarity"
-                            ).length +
-                            getActivityEvents(
                                 "guild_league"
                             ).length +
                             getActivityEvents(
@@ -8112,6 +8617,12 @@ function renderAnalytics() {
                                     ${escapeHTML(
                                         row.member.name
                                     )}
+
+                                    ${
+                                        row.member.leftGuild
+                                        ? `<span class="ml-1.5 text-[9px] font-normal px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">ออกจากกิล</span>`
+                                        : ""
+                                    }
 
                                 </td>
 

@@ -1033,13 +1033,14 @@ let isAdmin =
 ========================================================= */
 
 let attendanceEditingEvent = null;
+let combinedAttendanceEvents = null;
+let pendingCombinedStatus = {};
 let currentGuildLeagueRoom = "main";
 let pendingAttendanceStatus = {};
 let attendanceSearchText = "";
 let attendanceSortMode = "name-asc";
 let membersSearchText = "";
 let membersSortMode = "name-asc";
-let membersShowLeft = false;
 let poolVisibleCount = 10;
 
 
@@ -2744,6 +2745,25 @@ async function (buttonEl) {
 };
 
 
+function truncateExportText(
+    text,
+    maxChars
+) {
+
+    const str =
+        String(text || "");
+
+    if (str.length <= maxChars)
+        return str;
+
+    return str.slice(
+        0,
+        maxChars - 1
+    ) + "…";
+
+}
+
+
 function buildExportNode(
     title,
     groups
@@ -2817,7 +2837,7 @@ function buildExportNode(
                     document.createElement("div");
 
                 col.style.cssText =
-                    "flex:1 1 160px;min-width:150px;" +
+                    "flex:1 1 190px;min-width:180px;" +
                     "background:#1e293b;padding:8px;";
 
 
@@ -2849,7 +2869,7 @@ function buildExportNode(
                         document.createElement("div");
 
                     row.style.cssText =
-                        "padding:3px 2px;" +
+                        "padding:4px 2px;" +
                         "border-bottom:1px solid #1e293b33;" +
                         (
                             member
@@ -2858,51 +2878,22 @@ function buildExportNode(
                         );
 
 
-                    const topLine =
+                    const nameLine =
                         document.createElement("div");
 
-                    topLine.style.cssText =
-                        "display:flex;justify-content:space-between;" +
-                        "align-items:baseline;gap:6px;font-size:11px;";
+                    nameLine.style.cssText =
+                        "font-size:11px;font-weight:700;" +
+                        "white-space:pre;";
 
-
-                    const nameSpan =
-                        document.createElement("span");
-
-                    nameSpan.style.cssText =
-                        "flex:1 1 auto;min-width:0;" +
-                        "overflow:hidden;text-overflow:ellipsis;" +
-                        "white-space:nowrap;font-weight:600;" +
-                        "display:block;";
-
-                    nameSpan.textContent =
+                    nameLine.textContent =
                         member
-                        ? (member.name || "-")
+                        ? truncateExportText(
+                            member.name || "-",
+                            20
+                        )
                         : "ว่าง";
 
-                    topLine.appendChild(nameSpan);
-
-
-                    if (member) {
-
-                        const cpSpan =
-                            document.createElement("span");
-
-                        cpSpan.style.cssText =
-                            "color:#7dd3fc;white-space:nowrap;" +
-                            "flex-shrink:0;font-size:10px;";
-
-                        cpSpan.textContent =
-                            member.cp
-                            ? Number(member.cp)
-                                .toLocaleString()
-                            : "";
-
-                        topLine.appendChild(cpSpan);
-
-                    }
-
-                    row.appendChild(topLine);
+                    row.appendChild(nameLine);
 
 
                     if (member) {
@@ -2917,19 +2908,42 @@ function buildExportNode(
                             classInfo.color ||
                             "#94a3b8";
 
-                        const classSpan =
+                        const metaLine =
                             document.createElement("div");
 
-                        classSpan.style.cssText =
+                        metaLine.style.cssText =
                             "font-size:9px;font-weight:600;" +
-                            "overflow:hidden;text-overflow:ellipsis;" +
-                            "white-space:nowrap;color:" +
-                            classColor + ";";
+                            "white-space:pre;margin-top:1px;";
 
-                        classSpan.textContent =
-                            member.class || "";
+                        const classPart =
+                            document.createElement("span");
 
-                        row.appendChild(classSpan);
+                        classPart.style.cssText =
+                            "color:" + classColor + ";";
+
+                        classPart.textContent =
+                            truncateExportText(
+                                member.class || "",
+                                14
+                            );
+
+                        const cpPart =
+                            document.createElement("span");
+
+                        cpPart.style.cssText =
+                            "color:#7dd3fc;";
+
+                        cpPart.textContent =
+                            member.cp
+                            ? "  ·  " +
+                                Number(member.cp)
+                                    .toLocaleString()
+                            : "";
+
+                        metaLine.appendChild(classPart);
+                        metaLine.appendChild(cpPart);
+
+                        row.appendChild(metaLine);
 
                     }
 
@@ -5131,9 +5145,9 @@ function (id) {
             (member.name || "สมาชิกนี้") +
             "\" ออกจากกิลด์ใช่หรือไม่?\n\n" +
             "จะถูกเอาออกจาก Party และไม่แสดงในคลังรายชื่อ/" +
-            "รายการ Attendance รอบถัดไป\n" +
-            "แต่ประวัติ Attendance และ Analytics เดิมจะยังอยู่ครบ " +
-            "(กู้คืนได้ภายหลังในหน้า Members)"
+            "รายการ Attendance รอบถัดไป รวมถึงไม่แสดงใน " +
+            "Members และ Analytics อีกต่อไป\n" +
+            "(ประวัติ Attendance เก่ายังอยู่ในระบบ แต่จะไม่ถูกนับในสถิติแล้ว)"
         )
     )
         return;
@@ -5167,119 +5181,6 @@ function (id) {
 
 
     saveData();
-
-    renderGroups();
-
-    renderUnassignedPool();
-
-};
-
-
-window.restoreMember =
-function (id) {
-
-    if (!isAdmin) return;
-
-
-    const member =
-        guildData.members.find(
-            m =>
-                m.id === id
-        );
-
-    if (!member) return;
-
-
-    member.leftGuild = false;
-
-
-    saveData();
-
-    renderMembersPage();
-
-};
-
-
-window.permanentlyDeleteMember =
-function (id) {
-
-    if (!isAdmin) return;
-
-
-    const member =
-        guildData.members.find(
-            m =>
-                m.id === id
-        );
-
-    if (!member) return;
-
-
-    if (
-        !confirm(
-            "ลบ \"" +
-            (member.name || "สมาชิกนี้") +
-            "\" ออกจากระบบถาวรใช่หรือไม่?\n\n" +
-            "จะถูกลบออกจากคลังรายชื่อ, Party, " +
-            "Attendance และ Analytics ทั้งหมด " +
-            "รวมถึงประวัติเก่าด้วย และไม่สามารถกู้คืนได้"
-        )
-    )
-        return;
-
-
-    guildData.members =
-        guildData.members.filter(
-            m =>
-                m.id !== id
-        );
-
-
-    Object.values(
-        guildData.activities || {}
-    ).forEach(activity => {
-
-        (activity.groups || [])
-            .forEach(group => {
-
-                (group.parties || [])
-                    .forEach(party => {
-
-                        party.members =
-                            (party.members || [])
-                            .filter(
-                                m =>
-                                    m.id !== id
-                            );
-
-                    });
-
-            });
-
-
-        Object.values(
-            activity.attendance || {}
-        ).forEach(eventAttendance => {
-
-            delete eventAttendance[id];
-
-        });
-
-    });
-
-
-    Object.values(
-        guildData.dailyAttendance || {}
-    ).forEach(dayAttendance => {
-
-        delete dayAttendance[id];
-
-    });
-
-
-    saveData();
-
-    renderMembersPage();
 
     renderGroups();
 
@@ -5804,7 +5705,56 @@ function (
     }
 
 
+    combinedAttendanceEvents = null;
+
     pendingAttendanceStatus = {};
+
+
+    renderAttendancePage();
+
+};
+
+
+window.selectCombinedGuildLeague =
+function () {
+
+    if (!isAdmin) {
+
+        alert(
+            "เฉพาะ Admin เท่านั้นที่บันทึก Attendance ได้"
+        );
+
+        return;
+
+    }
+
+
+    if (combinedAttendanceEvents) {
+
+        combinedAttendanceEvents = null;
+
+    } else {
+
+        const rounds =
+            getDayEventsForDate(
+                attendanceSelectedDate
+            ).filter(
+                e =>
+                    e.name === "Guild League"
+            );
+
+        if (rounds.length < 2)
+            return;
+
+        combinedAttendanceEvents =
+            rounds;
+
+        attendanceEditingEvent = null;
+
+    }
+
+
+    pendingCombinedStatus = {};
 
 
     renderAttendancePage();
@@ -5918,6 +5868,15 @@ function renderAttendanceMemberRows() {
     if (!rowsContainer)
         return;
 
+    if (combinedAttendanceEvents) {
+
+        rowsContainer.innerHTML =
+            getCombinedAttendanceRowsHTML();
+
+        return;
+
+    }
+
     if (!attendanceEditingEvent)
         return;
 
@@ -5926,6 +5885,91 @@ function renderAttendanceMemberRows() {
             attendanceEditingEvent.activityKey,
             attendanceEditingEvent.eventId
         );
+
+}
+
+
+function getCombinedAttendanceRowsHTML() {
+
+    const members =
+        getFilteredSortedAttendanceMembers();
+
+    if (!members.length) {
+
+        return `<div class="text-center text-slate-600 py-10">ไม่พบสมาชิกที่ค้นหา</div>`;
+
+    }
+
+    const activityKey =
+        combinedAttendanceEvents[0].activity;
+
+    const round0 =
+        combinedAttendanceEvents[0];
+
+    const round1 =
+        combinedAttendanceEvents[1];
+
+    return members.map(member => {
+
+        const info =
+            getClassInfo(member.class);
+
+        const color =
+            member.classColor ||
+            info.color ||
+            "#475569";
+
+        const getRoundStatus =
+            (roundIndex, event) =>
+                pendingCombinedStatus[member.id]
+                ?.[roundIndex] ??
+                getAttendanceStatus(
+                    activityKey,
+                    event.id,
+                    member.id
+                );
+
+        const status0 = getRoundStatus(0, round0);
+        const status1 = getRoundStatus(1, round1);
+
+        const buildRoundButtons =
+            (roundIndex, status, label) => `
+            <div
+                class="grid grid-cols-3 gap-1"
+                data-combined-member="${escapeHTML(member.id)}"
+                data-combined-round="${roundIndex}"
+                data-member-id="${escapeHTML(member.id)}"
+                data-selected="${status}"
+            >
+                <button onclick="chooseCombinedAttendance('${escapeHTML(member.id)}', ${roundIndex}, 'present')"
+                    class="combined-attendance-choice px-1.5 py-1.5 rounded-lg border text-[9px] ${status === "present" ? "status-present" : "bg-slate-900 border-slate-800 text-slate-500"}"
+                    data-status="present">Present ${label}</button>
+                <button onclick="chooseCombinedAttendance('${escapeHTML(member.id)}', ${roundIndex}, 'low')"
+                    class="combined-attendance-choice px-1.5 py-1.5 rounded-lg border text-[9px] ${status === "low" ? "status-low" : "bg-slate-900 border-slate-800 text-slate-500"}"
+                    data-status="low">Low/AFK ${label}</button>
+                <button onclick="chooseCombinedAttendance('${escapeHTML(member.id)}', ${roundIndex}, 'absent')"
+                    class="combined-attendance-choice px-1.5 py-1.5 rounded-lg border text-[9px] ${status === "absent" ? "status-absent" : "bg-slate-900 border-slate-800 text-slate-500"}"
+                    data-status="absent">Absent ${label}</button>
+            </div>
+        `;
+
+        return `
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    ${getClassLogoHTML(member.class, color, member.classIcon)}
+                    <div class="min-w-0">
+                        <div class="font-semibold text-xs truncate">${escapeHTML(member.name)}</div>
+                        <div class="text-[10px]" style="color:${escapeHTML(color)}">${escapeHTML(member.class || "Unknown")}</div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1 sm:w-[280px]">
+                    ${buildRoundButtons(0, status0, "1")}
+                    ${buildRoundButtons(1, status1, "2")}
+                </div>
+            </div>
+        `;
+
+    }).join("");
 
 }
 
@@ -6002,7 +6046,7 @@ function getEventAttendanceRowsHTML(
                     min-w-0
                 ">
 
-                    ${getClassLogoHTML(member)}
+                    ${getClassLogoHTML(member.class, color, member.classIcon)}
 
                     <div class="min-w-0">
 
@@ -6331,6 +6375,91 @@ function () {
 };
 
 
+window.chooseCombinedAttendance =
+function (memberId, roundIndex, status) {
+
+    if (!isAdmin) return;
+
+    pendingCombinedStatus[memberId] =
+        pendingCombinedStatus[memberId] || {};
+
+    pendingCombinedStatus[memberId][roundIndex] = status;
+
+    const wrapper =
+        document.querySelector(
+            `[data-combined-member="${memberId}"][data-combined-round="${roundIndex}"]`
+        );
+
+    if (!wrapper) return;
+
+    wrapper.querySelectorAll(".combined-attendance-choice").forEach(button => {
+
+        const active = button.dataset.status === status;
+
+        button.className =
+            "combined-attendance-choice px-1.5 py-1.5 rounded-lg border text-[9px] " +
+            (
+                active
+                ? (status === "present" ? "status-present" : status === "low" ? "status-low" : "status-absent")
+                : "bg-slate-900 border-slate-800 text-slate-500"
+            );
+
+    });
+
+    wrapper.dataset.selected = status;
+    wrapper.dataset.memberId = memberId;
+
+};
+
+
+window.setAllCombinedAttendance =
+function (roundIndex, status) {
+
+    document.querySelectorAll(`[data-combined-round="${roundIndex}"]`).forEach(wrapper => {
+
+        chooseCombinedAttendance(wrapper.dataset.memberId, roundIndex, status);
+
+    });
+
+};
+
+
+window.saveCombinedAttendance =
+function () {
+
+    if (!isAdmin) return;
+
+    if (!combinedAttendanceEvents) return;
+
+    combinedAttendanceEvents.forEach((event, roundIndex) => {
+
+        const attendance = ensureAttendance(event.activity);
+
+        if (!attendance[event.id]) attendance[event.id] = {};
+
+        (guildData.members || []).forEach(member => {
+
+            const status =
+                pendingCombinedStatus[member.id]?.[roundIndex] ??
+                getAttendanceStatus(event.activity, event.id, member.id);
+
+            attendance[event.id][member.id] = { status, updatedAt: Date.now() };
+
+        });
+
+    });
+
+    saveData();
+
+    pendingCombinedStatus = {};
+
+    renderAttendancePage();
+
+    alert("บันทึก Attendance ของ Guild League ทั้ง 2 รอบเรียบร้อย");
+
+};
+
+
 /* =========================================================
    DAILY ATTENDANCE
    ---------------------------------------------------------
@@ -6507,17 +6636,6 @@ function (value) {
 };
 
 
-window.toggleMembersShowLeft =
-function () {
-
-    membersShowLeft =
-        !membersShowLeft;
-
-    renderMembersPage();
-
-};
-
-
 window.toggleMemberDiscord =
 function (id) {
 
@@ -6572,10 +6690,7 @@ function getMembersTableHTML() {
     let members =
         (guildData.members || [])
         .filter(member =>
-            (
-                membersShowLeft ||
-                !member.leftGuild
-            ) &&
+            !member.leftGuild &&
             (
                 !search ||
                 String(member.name || "")
@@ -6672,11 +6787,6 @@ function getMembersTableHTML() {
             <tr class="
                 border-b border-slate-800/60
                 hover:bg-slate-800/30
-                ${
-                    member.leftGuild
-                    ? "opacity-50"
-                    : ""
-                }
             ">
 
                 <td class="p-2.5 text-slate-500 text-xs text-center">
@@ -6698,11 +6808,6 @@ function getMembersTableHTML() {
                         member.name ||
                         "Unknown"
                     )}
-                    ${
-                        member.leftGuild
-                        ? `<span class="ml-1 text-[9px] font-normal px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">ออกจากกิล</span>`
-                        : ""
-                    }
                 </td>
 
                 <td
@@ -6777,25 +6882,6 @@ function getMembersTableHTML() {
                     ${
                         !isAdmin
                         ? ""
-                        : member.leftGuild
-                        ? `
-                            <div class="flex gap-1 justify-center">
-                                <button
-                                    onclick="restoreMember('${escapeHTML(member.id)}')"
-                                    title="กู้คืน (กลับเข้ากิลด์)"
-                                    class="p-1.5 text-slate-500 hover:text-emerald-400"
-                                >
-                                    <i class="fa-solid fa-rotate-left text-xs"></i>
-                                </button>
-                                <button
-                                    onclick="permanentlyDeleteMember('${escapeHTML(member.id)}')"
-                                    title="ลบถาวร (รวมประวัติ)"
-                                    class="p-1.5 text-slate-500 hover:text-rose-400"
-                                >
-                                    <i class="fa-solid fa-trash text-xs"></i>
-                                </button>
-                            </div>
-                        `
                         : `
                             <div class="flex gap-1 justify-center">
                                 <button
@@ -6911,10 +6997,6 @@ function renderMembersPage() {
         (guildData.members || [])
         .filter(m => !m.leftGuild).length;
 
-    const leftCount =
-        (guildData.members || [])
-        .filter(m => m.leftGuild).length;
-
 
     container.innerHTML = `
 
@@ -6926,45 +7008,14 @@ function renderMembersPage() {
             mb-5
         ">
 
-            <div class="
-                flex
-                flex-col
-                sm:flex-row
-                sm:items-center
-                justify-between
-                gap-3
-                mb-4
-            ">
-
-                <div>
-                    <h2 class="text-xl font-bold">
-                        <i class="fa-solid fa-address-card text-sky-400 mr-2"></i>
-                        Members
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-1">
-                        Total Members: ${activeCount} คน
-                        ${
-                            leftCount
-                            ? ` · ออกจากกิลแล้ว ${leftCount} คน`
-                            : ""
-                        }
-                    </p>
-                </div>
-
-                <label class="
-                    flex items-center gap-2
-                    text-xs text-slate-400
-                    cursor-pointer
-                ">
-                    <input
-                        type="checkbox"
-                        onchange="toggleMembersShowLeft()"
-                        ${membersShowLeft ? "checked" : ""}
-                        class="accent-sky-500 w-4 h-4"
-                    >
-                    แสดงคนที่ออกกิลด้วย
-                </label>
-
+            <div class="mb-4">
+                <h2 class="text-xl font-bold">
+                    <i class="fa-solid fa-address-card text-sky-400 mr-2"></i>
+                    Members
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Total Members: ${activeCount} คน
+                </p>
             </div>
 
 
@@ -7258,7 +7309,17 @@ function renderAttendancePage() {
                                 flex-wrap
                                 gap-2
                             ">
-                                ${events.map(event => {
+                                ${(() => {
+
+                                    const guildLeagueRounds =
+                                        events.filter(e => e.name === "Guild League");
+
+                                    const otherEvents =
+                                        guildLeagueRounds.length >= 2
+                                        ? events.filter(e => e.name !== "Guild League")
+                                        : events;
+
+                                    const otherCardsHTML = otherEvents.map(event => {
 
                                     const isSelected =
                                         attendanceEditingEvent
@@ -7309,7 +7370,29 @@ function renderAttendancePage() {
                                         </span>
                                     </div>
                                     `;
-                                }).join("")}
+                                    }).join("");
+
+                                    if (guildLeagueRounds.length < 2) return otherCardsHTML;
+
+                                    const isCombinedSelected = !!combinedAttendanceEvents;
+                                    const isCombinedDone = guildLeagueRounds.every(r => hasEventAttendance(r.activity, r.id));
+                                    const combinedTimes = guildLeagueRounds.map(r => r.time).join(" · ");
+
+                                    const combinedCardHTML = `
+                                        <div
+                                            onclick="selectCombinedGuildLeague()"
+                                            title="${isCombinedSelected ? "กดอีกครั้งเพื่อปิด" : "กดเพื่อเลือกทั้ง 2 รอบพร้อมกัน"}"
+                                            class="border rounded-lg px-3 py-2 text-xs cursor-pointer transition flex items-center gap-2 ${isCombinedSelected ? "bg-emerald-600/20 border-emerald-500" : "bg-slate-900 border-slate-800 hover:border-emerald-500/60 hover:bg-slate-800"}"
+                                        >
+                                            ${isCombinedDone ? `<i class="fa-solid fa-circle-check text-emerald-400"></i>` : ""}
+                                            <span class="font-semibold">Guild League (2 รอบ)</span>
+                                            <span class="text-sky-400"><i class="fa-regular fa-clock"></i> ${escapeHTML(combinedTimes)}</span>
+                                        </div>
+                                    `;
+
+                                    return otherCardsHTML + combinedCardHTML;
+
+                                })()}
                             </div>
                         `
                         : `
@@ -7336,7 +7419,55 @@ function renderAttendancePage() {
             ">
 
                 ${
-                    attendanceEditingEvent
+                    combinedAttendanceEvents
+                    ? `
+
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="font-bold">
+                                    <i class="fa-solid fa-clipboard-check text-emerald-400 mr-2"></i>
+                                    Guild League (2 รอบ)
+                                    <span class="text-slate-500 font-normal text-xs">
+                                        · ${escapeHTML(combinedAttendanceEvents[0].time)} · ${escapeHTML(combinedAttendanceEvents[1].time)}
+                                    </span>
+                                </h3>
+                                <p class="text-[11px] text-slate-500 mt-1">
+                                    กด Present/Low/Absent ของแต่ละรอบให้แต่ละคน แล้วกด Save ครั้งเดียวบันทึกทั้ง 2 รอบ
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="setAllCombinedAttendance(0,'present');setAllCombinedAttendance(1,'present');" ${adminDisabled}
+                                    class="px-3 py-2 rounded-lg bg-emerald-600/20 text-emerald-300 text-xs">ทั้งหมด Present (2 รอบ)</button>
+                                <button onclick="selectCombinedGuildLeague()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">
+                                    <i class="fa-solid fa-arrow-left mr-1"></i> กลับไป Active/Inactive</button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
+                                <input type="text" placeholder="ค้นหาชื่อสมาชิก..." value="${escapeHTML(attendanceSearchText)}"
+                                    oninput="setAttendanceSearch(this.value)"
+                                    class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs outline-none focus:border-emerald-500">
+                            </div>
+                            <select onchange="setAttendanceSort(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-300 outline-none focus:border-emerald-500">
+                                <option value="name-asc" ${attendanceSortMode === "name-asc" ? "selected" : ""}>ชื่อ A-Z</option>
+                                <option value="name-desc" ${attendanceSortMode === "name-desc" ? "selected" : ""}>ชื่อ Z-A</option>
+                                <option value="class-asc" ${attendanceSortMode === "class-asc" ? "selected" : ""}>อาชีพ A-Z</option>
+                            </select>
+                        </div>
+
+                        <div id="attendance-member-rows" class="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                            ${getCombinedAttendanceRowsHTML()}
+                        </div>
+
+                        <div class="flex justify-end mt-5 pt-4 border-t border-slate-800">
+                            <button onclick="saveCombinedAttendance()" ${adminDisabled} class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> Save Attendance (2 รอบ)</button>
+                        </div>
+
+                    `
+                    : attendanceEditingEvent
                     ? `
 
                         <div class="
@@ -8038,9 +8169,11 @@ function renderAnalytics() {
         );
 
     const members =
-        [...(
-            guildData.members || []
-        )];
+        (guildData.members || [])
+        .filter(
+            member =>
+                !member.leftGuild
+        );
 
     const activityKeys = [
         "guild_league",
@@ -8617,12 +8750,6 @@ function renderAnalytics() {
                                     ${escapeHTML(
                                         row.member.name
                                     )}
-
-                                    ${
-                                        row.member.leftGuild
-                                        ? `<span class="ml-1.5 text-[9px] font-normal px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">ออกจากกิล</span>`
-                                        : ""
-                                    }
 
                                 </td>
 

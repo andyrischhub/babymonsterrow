@@ -5737,13 +5737,18 @@ function ensureAttendance(activityKey) {
 function getAttendanceStatus(
     activityKey,
     eventId,
-    memberId
+    memberId,
+    weekSnapshot
 ) {
 
     const attendance =
-        guildData.activities
-        ?.[activityKey]
-        ?.attendance
+        (
+            weekSnapshot
+            ? weekSnapshot[activityKey]
+            : guildData.activities
+                ?.[activityKey]
+                ?.attendance
+        )
         ?.[eventId]
         ?.[memberId];
 
@@ -7811,7 +7816,8 @@ function getActivityEvents(activityKey) {
 
 function getMemberAttendanceStats(
     memberId,
-    activityKey
+    activityKey,
+    weekSnapshot
 ) {
 
     const events =
@@ -7829,7 +7835,8 @@ function getMemberAttendanceStats(
             getAttendanceStatus(
                 activityKey,
                 event.id,
-                memberId
+                memberId,
+                weekSnapshot
             );
 
         if (status === "present")
@@ -7883,6 +7890,78 @@ let analyticsSort =
 
 let analyticsFilter =
     "all";
+
+
+/*
+    null = ดูสัปดาห์ปัจจุบัน (ข้อมูลสด ที่ยังแก้ไขได้)
+    ไม่งั้นเป็น key วันจันทร์ที่ชี้ไปยัง
+    guildData.attendanceHistory (สัปดาห์ที่ปิดไปแล้ว)
+*/
+let analyticsViewedWeek =
+    null;
+
+
+function getAnalyticsWeekList() {
+
+    const weeks =
+        [
+            guildData.attendanceWeekStart,
+            ...Object.keys(
+                guildData.attendanceHistory || {}
+            )
+        ].filter(Boolean);
+
+    return [...new Set(weeks)].sort();
+
+}
+
+
+window.shiftAnalyticsWeek =
+function (offset) {
+
+    const weeks =
+        getAnalyticsWeekList();
+
+    const currentKey =
+        analyticsViewedWeek ||
+        guildData.attendanceWeekStart;
+
+    const idx =
+        weeks.indexOf(currentKey);
+
+    if (idx === -1) return;
+
+    const newIdx =
+        idx + Number(offset);
+
+    if (
+        newIdx < 0 ||
+        newIdx >= weeks.length
+    )
+        return;
+
+    const newKey =
+        weeks[newIdx];
+
+    analyticsViewedWeek =
+        newKey === guildData.attendanceWeekStart
+        ? null
+        : newKey;
+
+    renderAnalytics();
+
+};
+
+
+window.jumpToCurrentAnalyticsWeek =
+function () {
+
+    analyticsViewedWeek =
+        null;
+
+    renderAnalytics();
+
+};
 
 
 window.setAnalyticsSort =
@@ -8296,6 +8375,34 @@ function renderAnalytics() {
         "castle_siege"
     ];
 
+
+    const weekList =
+        getAnalyticsWeekList();
+
+    const viewedWeekKey =
+        analyticsViewedWeek ||
+        guildData.attendanceWeekStart;
+
+    const isCurrentWeek =
+        !analyticsViewedWeek;
+
+    const weekSnapshot =
+        isCurrentWeek
+        ? null
+        : guildData.attendanceHistory
+            ?.[viewedWeekKey];
+
+    const viewedIndex =
+        weekList.indexOf(viewedWeekKey);
+
+    const canViewOlder =
+        viewedIndex > 0;
+
+    const canViewNewer =
+        viewedIndex !== -1 &&
+        viewedIndex < weekList.length - 1;
+
+
     let rows = [];
 
     members.forEach(member => {
@@ -8305,13 +8412,15 @@ function renderAnalytics() {
             guild_league:
                 getMemberAttendanceStats(
                     member.id,
-                    "guild_league"
+                    "guild_league",
+                    weekSnapshot
                 ),
 
             castle_siege:
                 getMemberAttendanceStats(
                     member.id,
-                    "castle_siege"
+                    "castle_siege",
+                    weekSnapshot
                 )
 
         };
@@ -8423,9 +8532,9 @@ function renderAnalytics() {
 
 
     const weekStartDate =
-        guildData.attendanceWeekStart
+        viewedWeekKey
         ? new Date(
-            guildData.attendanceWeekStart +
+            viewedWeekKey +
             "T00:00:00+07:00"
           )
         : null;
@@ -8461,19 +8570,98 @@ function renderAnalytics() {
             <div class="
                 flex
                 items-center
+                justify-between
+                flex-wrap
                 gap-2
                 text-xs
                 text-slate-500
                 px-1
             ">
-                <i class="fa-solid fa-rotate text-purple-400"></i>
-                สถิติประจำสัปดาห์นี้
-                ${
-                    weekRangeLabel
-                    ? "(" + weekRangeLabel + ")"
-                    : ""
-                }
-                · รีเซ็ตอัตโนมัติทุกวันจันทร์
+
+                <div class="
+                    flex
+                    items-center
+                    gap-2
+                ">
+                    <i class="fa-solid fa-rotate text-purple-400"></i>
+                    ${
+                        isCurrentWeek
+                        ? "สถิติประจำสัปดาห์นี้"
+                        : "สถิติย้อนหลัง"
+                    }
+                    ${
+                        weekRangeLabel
+                        ? "(" + weekRangeLabel + ")"
+                        : ""
+                    }
+                    ${
+                        isCurrentWeek
+                        ? " · รีเซ็ตอัตโนมัติทุกวันจันทร์"
+                        : ""
+                    }
+                </div>
+
+                <div class="
+                    flex
+                    items-center
+                    gap-1
+                ">
+
+                    <button
+                        onclick="shiftAnalyticsWeek(-1)"
+                        ${canViewOlder ? "" : "disabled"}
+                        title="สัปดาห์ก่อนหน้า"
+                        class="
+                            w-7 h-7
+                            rounded-lg
+                            bg-slate-800
+                            hover:bg-slate-700
+                            disabled:opacity-30
+                            disabled:cursor-not-allowed
+                        "
+                    >
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+
+                    ${
+                        isCurrentWeek
+                        ? ""
+                        : `
+                            <button
+                                onclick="jumpToCurrentAnalyticsWeek()"
+                                class="
+                                    px-2 h-7
+                                    rounded-lg
+                                    bg-purple-900/40
+                                    text-purple-300
+                                    hover:bg-purple-900/60
+                                    text-[11px]
+                                    whitespace-nowrap
+                                "
+                            >
+                                กลับสัปดาห์นี้
+                            </button>
+                        `
+                    }
+
+                    <button
+                        onclick="shiftAnalyticsWeek(1)"
+                        ${canViewNewer ? "" : "disabled"}
+                        title="สัปดาห์ถัดไป"
+                        class="
+                            w-7 h-7
+                            rounded-lg
+                            bg-slate-800
+                            hover:bg-slate-700
+                            disabled:opacity-30
+                            disabled:cursor-not-allowed
+                        "
+                    >
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+
+                </div>
+
             </div>
 
             <div class="
@@ -9117,7 +9305,8 @@ function renderAnalytics() {
                                 const stats =
                                     getMemberAttendanceStats(
                                         member.id,
-                                        key
+                                        key,
+                                        weekSnapshot
                                     );
 
 

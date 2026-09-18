@@ -5696,6 +5696,92 @@ function checkWeeklyAttendanceReset() {
 }
 
 
+/*
+    สี/ไอคอนอาชีพของสมาชิกแต่ละคนถูก "จำ" ไว้ในตัว
+    member เองตอนเพิ่ม/แก้/sync ครั้งล่าสุด ถ้าตอนนั้น
+    fallbackClasses ยังไม่มีอาชีพนั้น หรือสะกดไม่ตรง
+    ค่าเก่าที่ผิดจะค้างอยู่แบบนั้นแม้จะแก้ fallbackClasses
+    แล้วก็ตาม ฟังก์ชันนี้จะคำนวณสี/ไอคอนใหม่จาก
+    getClassInfo ให้ทุกคน (ทั้งใน roster และสำเนาที่อยู่
+    ใน party) ทุกครั้งที่โหลดข้อมูล เพื่อให้ตรงกับ
+    fallbackClasses ปัจจุบันเสมอ
+*/
+function refreshMemberClassVisuals() {
+
+    let changed = false;
+
+    (guildData.members || [])
+        .forEach(member => {
+
+            const info =
+                getClassInfo(member.class);
+
+            const color =
+                info.color || "";
+
+            const icon =
+                info.icon || "";
+
+            if (
+                member.classColor !== color ||
+                member.classIcon !== icon
+            ) {
+
+                member.classColor = color;
+                member.classIcon = icon;
+                changed = true;
+
+            }
+
+        });
+
+    Object.values(
+        guildData.activities || {}
+    ).forEach(activity => {
+
+        (activity.groups || [])
+            .forEach(group => {
+
+                (group.parties || [])
+                    .forEach(party => {
+
+                        (party.members || [])
+                            .forEach(p => {
+
+                                const info =
+                                    getClassInfo(p.class);
+
+                                const color =
+                                    info.color || "";
+
+                                const icon =
+                                    info.icon || "";
+
+                                if (
+                                    p.classColor !== color ||
+                                    p.classIcon !== icon
+                                ) {
+
+                                    p.classColor = color;
+                                    p.classIcon = icon;
+                                    changed = true;
+
+                                }
+
+                            });
+
+                    });
+
+            });
+
+    });
+
+    if (changed)
+        saveData();
+
+}
+
+
 /* =========================================================
    ATTENDANCE HELPERS
 ========================================================= */
@@ -7794,6 +7880,34 @@ function renderAttendancePage() {
    สำหรับ Guild League + ศึกชิงปราสาท
 ========================================================= */
 
+/*
+    เช็คว่า event นี้ถูกกดบันทึก attendance ไปแล้ว
+    จริงๆ หรือยัง (มีอย่างน้อย 1 คนถูกมาร์กสถานะ)
+    ใช้แยกกับ "ยังไม่ได้กดบันทึกเลย" เพื่อไม่ให้ event
+    ที่ยังไม่ได้บันทึกถูกนับเป็น absent ของทุกคนใน Analytics
+*/
+function isEventRecorded(
+    activityKey,
+    eventId,
+    weekSnapshot
+) {
+
+    const record =
+        (
+            weekSnapshot
+            ? weekSnapshot[activityKey]
+            : guildData.activities
+                ?.[activityKey]
+                ?.attendance
+        )
+        ?.[eventId];
+
+    return !!record &&
+        Object.keys(record).length > 0;
+
+}
+
+
 function getActivityEvents(activityKey) {
 
     const activityName =
@@ -7823,6 +7937,13 @@ function getMemberAttendanceStats(
     const events =
         getActivityEvents(
             activityKey
+        )
+        .filter(event =>
+            isEventRecorded(
+                activityKey,
+                event.id,
+                weekSnapshot
+            )
         );
 
     let present = 0;
@@ -8531,6 +8652,30 @@ function renderAnalytics() {
         : 0;
 
 
+    const scheduledEventCount =
+        activityKeys.reduce(
+            (sum, key) =>
+                sum +
+                getActivityEvents(key).length,
+            0
+        );
+
+    const recordedEventCount =
+        activityKeys.reduce(
+            (sum, key) =>
+                sum +
+                getActivityEvents(key)
+                    .filter(event =>
+                        isEventRecorded(
+                            key,
+                            event.id,
+                            weekSnapshot
+                        )
+                    ).length,
+            0
+        );
+
+
     const weekStartDate =
         viewedWeekKey
         ? new Date(
@@ -8664,6 +8809,23 @@ function renderAnalytics() {
 
             </div>
 
+            ${
+                weekList.length <= 1
+                ? `
+                    <div class="
+                        text-[11px]
+                        text-slate-600
+                        px-1
+                        -mt-3
+                    ">
+                        ยังไม่มีสัปดาห์ก่อนหน้าให้ย้อนดู
+                        จะเริ่มมีข้อมูลให้กดดูหลังผ่าน
+                        การรีเซ็ตวันจันทร์ครั้งแรกไปแล้ว
+                    </div>
+                `
+                : ""
+            }
+
             <div class="
                 grid
                 grid-cols-1
@@ -8697,7 +8859,7 @@ function renderAnalytics() {
                         mt-2
                     ">
 
-                        ${guildData.members.length}
+                        ${members.length}
 
                     </div>
 
@@ -8717,7 +8879,7 @@ function renderAnalytics() {
                         text-slate-500
                     ">
 
-                        Events ที่บันทึก
+                        Events ที่บันทึกแล้ว
 
                     </div>
 
@@ -8728,14 +8890,11 @@ function renderAnalytics() {
                         text-sky-400
                     ">
 
-                        ${
-                            getActivityEvents(
-                                "guild_league"
-                            ).length +
-                            getActivityEvents(
-                                "castle_siege"
-                            ).length
-                        }
+                        ${recordedEventCount}<span class="
+                            text-base
+                            text-slate-600
+                            font-normal
+                        ">/${scheduledEventCount}</span>
 
                     </div>
 
@@ -9700,6 +9859,8 @@ onValue(
 
 
         checkWeeklyAttendanceReset();
+
+        refreshMemberClassVisuals();
 
         renderApp();
 

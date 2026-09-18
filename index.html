@@ -1060,9 +1060,11 @@ let classMaster = {};
 
 const fallbackClasses = {
 
-    "High Priest": {
-        color: "#92d050",
-        icon: "fa-solid fa-cross"
+    /* ---------- Swordsman -> Knight ---------- */
+
+    "Knight": {
+        color: "#b91c1c",
+        icon: "fa-solid fa-khanda"
     },
 
     "Lord Knight": {
@@ -1070,29 +1072,104 @@ const fallbackClasses = {
         icon: "fa-solid fa-shield-halved"
     },
 
+    "Paladin": {
+        color: "#800020",
+        icon: "fa-solid fa-shield-halved"
+    },
+
+    /* ---------- Mage -> Wizard / Sage ---------- */
+
+    "Wizard": {
+        color: "#2563eb",
+        icon: "fa-solid fa-wand-magic-sparkles"
+    },
+
+    "High Wizard": {
+        color: "#1e1b4b",
+        icon: "fa-solid fa-hat-wizard"
+    },
+
+    "High Wizzard": {
+        color: "#1e1b4b",
+        icon: "fa-solid fa-hat-wizard"
+    },
+
+    "Sage": {
+        color: "#0ea5e9",
+        icon: "fa-solid fa-book"
+    },
+
+    /* ---------- Archer -> Sniper / Bard / Dancer ---------- */
+
+    "Archer": {
+        color: "#4d7c0f",
+        icon: "fa-solid fa-bullseye"
+    },
+
     "Sniper": {
         color: "#ffff00",
         icon: "fa-solid fa-bullseye"
     },
 
-    "High Wizzard": {
-        color: "#17365d",
-        icon: "fa-solid fa-wand-magic-sparkles"
+    "Bard": {
+        color: "#d97706",
+        icon: "fa-solid fa-guitar"
     },
 
-    "Night Walker (GunSliger)": {
-        color: "#654321",
-        icon: "fa-solid fa-gun"
+    "Dancer": {
+        color: "#db2777",
+        icon: "fa-solid fa-drum"
     },
 
-    "Assassin Cross": {
-        color: "#7030a0",
+    /* ---------- Acolyte -> Priest / Monk ---------- */
+
+    "Priest": {
+        color: "#38bdf8",
+        icon: "fa-solid fa-cross"
+    },
+
+    "High Priest": {
+        color: "#92d050",
+        icon: "fa-solid fa-cross"
+    },
+
+    "HighPriest": {
+        color: "#92d050",
+        icon: "fa-solid fa-cross"
+    },
+
+    "Monk": {
+        color: "#f59e0b",
+        icon: "fa-solid fa-hand-fist"
+    },
+
+    "Champion": {
+        color: "#16a34a",
+        icon: "fa-solid fa-hand-fist"
+    },
+
+    /* ---------- Thief -> Rogue / Assassin ---------- */
+
+    "Rogue": {
+        color: "#556b2f",
+        icon: "fa-solid fa-user-ninja"
+    },
+
+    "Assassin": {
+        color: "#a855f7",
         icon: "fa-solid fa-mask"
     },
 
-    "Alitia (Druid)": {
-        color: "#a8d08d",
-        icon: "fa-solid fa-leaf"
+    "Assassin Cross": {
+        color: "#7c3aed",
+        icon: "fa-solid fa-mask"
+    },
+
+    /* ---------- Merchant -> Smith / Alchemist ---------- */
+
+    "Blacksmith": {
+        color: "#fb923c",
+        icon: "fa-solid fa-hammer"
     },
 
     "Whitesmith": {
@@ -1100,77 +1177,84 @@ const fallbackClasses = {
         icon: "fa-solid fa-hammer"
     },
 
-    "Paladin": {
-        color: "#800020",
-        icon: "fa-solid fa-shield-halved"
-    },
-
-    "Champion": {
-        color: "#00b050",
-        icon: "fa-solid fa-hand-fist"
-    },
-
-    "Sage": {
-        color: "#365f91",
-        icon: "fa-solid fa-book"
-    },
-
-    "Bard": {
-        color: "#548235",
-        icon: "fa-solid fa-guitar"
-    },
-
-    "Dancer": {
-        color: "#70ad47",
-        icon: "fa-solid fa-music"
-    },
-
-    "Biochemist": {
-        color: "#a6a6a6",
+    "Alchemist": {
+        color: "#65a30d",
         icon: "fa-solid fa-flask"
     },
 
-    "Rogue": {
-        color: "#556b2f",
-        icon: "fa-solid fa-user-ninja"
+    "Biochemist": {
+        color: "#84cc16",
+        icon: "fa-solid fa-flask"
     },
 
-    "Wizard": {
-        color: "#203864",
-        icon: "fa-solid fa-wand-magic-sparkles"
+    /* ---------- Gunslinger -> Night Walker ---------- */
+
+    "Gunslinger": {
+        color: "#b45309",
+        icon: "fa-solid fa-gun"
     },
 
-    "Archer": {
-        color: "#70ad47",
-        icon: "fa-solid fa-bullseye"
+    "Night Walker": {
+        color: "#654321",
+        icon: "fa-solid fa-gun"
     },
 
-    "Knight": {
-        color: "#c00000",
-        icon: "fa-solid fa-khanda"
+    "Night Walker(GunSliger)": {
+        color: "#654321",
+        icon: "fa-solid fa-gun"
     },
 
-    "Priest": {
-        color: "#5b9bd5",
-        icon: "fa-solid fa-cross"
+    "Night Walker (GunSliger)": {
+        color: "#654321",
+        icon: "fa-solid fa-gun"
     },
 
-    "Assassin": {
-        color: "#7030a0",
-        icon: "fa-solid fa-mask"
-    },
-
-    "Monk": {
-        color: "#ed7d31",
-        icon: "fa-solid fa-hand-fist"
-    },
+    /* ---------- Druid -> Alitea ---------- */
 
     "Druid": {
-        color: "#a8d08d",
+        color: "#22c55e",
         icon: "fa-solid fa-leaf"
+    },
+
+    "Alitea": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "Alitia": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "Alitia (Druid)": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "Alitea (Druid)": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
     }
 
 };
+
+
+/*
+    ชื่ออาชีพรุ่นเก่า/สะกดผิด ที่เก็บไว้ใน fallbackClasses
+    เฉพาะเพื่อให้สมาชิกเก่าที่บันทึกด้วยชื่อเหล่านี้ยังขึ้นสี/
+    โลโก้ถูกต้อง แต่ไม่ต้องการให้โผล่เป็นตัวเลือกตอนเพิ่ม/แก้
+    สมาชิกใหม่ (ดู rebuildClassList)
+*/
+
+const legacyClassAliasKeys = [
+    "HighPriest",
+    "High Wizzard",
+    "Night Walker(GunSliger)",
+    "Night Walker (GunSliger)",
+    "Alitia",
+    "Alitia (Druid)",
+    "Alitea (Druid)"
+];
 
 
 /* =========================================================
@@ -1192,6 +1276,18 @@ let guildData = {
        }
     */
     dailyAttendance: {},
+
+    /*
+       วันจันทร์ (YYYY-MM-DD) ของสัปดาห์ Attendance
+       ปัจจุบัน ใช้เช็คว่าเข้าสัปดาห์ใหม่หรือยัง
+    */
+    attendanceWeekStart: null,
+
+    /*
+       เก็บ attendance ของสัปดาห์ก่อนๆ ไว้ดูย้อนหลัง
+       key = วันจันทร์ของสัปดาห์นั้น (YYYY-MM-DD)
+    */
+    attendanceHistory: {},
 
     classMaster: {},
 
@@ -1333,7 +1429,10 @@ function rebuildClassList() {
 
     const names =
         new Set([
-            ...Object.keys(fallbackClasses),
+            ...Object.keys(fallbackClasses)
+                .filter(name =>
+                    !legacyClassAliasKeys.includes(name)
+                ),
             ...Object.keys(classMaster || {}),
             ...(guildData.members || [])
                 .map(m => m.class)
@@ -1877,144 +1976,13 @@ const classKey =
     classAliases[normalizedClass] ||
     normalizedClass;
 
-const fallbackClasses = {
-
-    "HighPriest": {
-        color: "#92d050",
-        icon: "fa-solid fa-cross"
-    },
-
-    "High Priest": {
-        color: "#92d050",
-        icon: "fa-solid fa-cross"
-    },
-
-    "Lord Knight": {
-        color: "#ffc000",
-        icon: "fa-solid fa-shield-halved"
-    },
-
-    "Sniper": {
-        color: "#ffff00",
-        icon: "fa-solid fa-bullseye"
-    },
-
-    "High Wizzard": {
-        color: "#00008b",
-        icon: "fa-solid fa-wand-magic-sparkles"
-    },
-
-    "Night Walker(GunSliger)": {
-        color: "#654321",
-        icon: "fa-solid fa-gun"
-    },
-
-    "Night Walker (GunSliger)": {
-        color: "#654321",
-        icon: "fa-solid fa-gun"
-    },
-
-    "Assassin Cross": {
-        color: "#8b00ff",
-        icon: "fa-solid fa-mask"
-    },
-
-    "Alitia (Druid)": {
-        color: "#a8d08d",
-        icon: "fa-solid fa-leaf"
-    },
-
-    "Whitesmith": {
-        color: "#d0cece",
-        icon: "fa-solid fa-hammer"
-    },
-
-    "Paladin": {
-        color: "#800020",
-        icon: "fa-solid fa-shield-halved"
-    },
-
-    "Champion": {
-        color: "#00a000",
-        icon: "fa-solid fa-hand-fist"
-    },
-
-    "Wizard": {
-        color: "#4169e1",
-        icon: "fa-solid fa-wand-magic-sparkles"
-    },
-
-    "Sage": {
-        color: "#6495ed",
-        icon: "fa-solid fa-book"
-    },
-
-    "Archer": {
-        color: "#228b22",
-        icon: "fa-solid fa-bullseye"
-    },
-
-    "Bard": {
-        color: "#66cdaa",
-        icon: "fa-solid fa-music"
-    },
-
-    "Dancer": {
-        color: "#20b2aa",
-        icon: "fa-solid fa-music"
-    },
-
-    "Biochemist": {
-        color: "#a9a9a9",
-        icon: "fa-solid fa-flask"
-    },
-
-    "Alchemist": {
-        color: "#808080",
-        icon: "fa-solid fa-flask"
-    },
-
-    "Knight": {
-        color: "#b91c1c",
-        icon: "fa-solid fa-shield-halved"
-    },
-
-    "Priest": {
-        color: "#87ceeb",
-        icon: "fa-solid fa-cross"
-    },
-
-    "Assassin": {
-        color: "#a855f7",
-        icon: "fa-solid fa-mask"
-    },
-
-    "Monk": {
-        color: "#f59e0b",
-        icon: "fa-solid fa-hand-fist"
-    },
-
-    "Druid": {
-        color: "#4ade80",
-        icon: "fa-solid fa-leaf"
-    },
-
-    "Gunslinger": {
-        color: "#654321",
-        icon: "fa-solid fa-gun"
-    },
-
-    "Blacksmith": {
-        color: "#fb923c",
-        icon: "fa-solid fa-hammer"
-    },
-
-    "Rogue": {
-        color: "#556b2f",
-        icon: "fa-solid fa-user-ninja"
-    }
-
-};
+/*
+    หมายเหตุ: เดิมตรงนี้มี fallbackClasses ของตัวเอง
+    แยกจากตัวบนสุดของไฟล์ ทำให้อาชีพที่เพิ่ม/แก้ที่เดียว
+    ไม่ไปอัปเดตอีกที่ -> สีและโลโก้เพี้ยน/หายตอน sync จาก
+    Google Sheet ตอนนี้ใช้ fallbackClasses ตัวเดียวร่วมกัน
+    ทั้งไฟล์แล้ว
+*/
 
 const classInfo =
     classMaster[normalizedClass] ||
@@ -5581,6 +5549,154 @@ function (
 
 
 /* =========================================================
+   WEEKLY ATTENDANCE RESET
+   ---------------------------------------------------------
+   ทุกวันจันทร์ (เวลาไทย / Asia-Bangkok) ระบบจะเริ่มรอบ
+   Attendance ใหม่โดยอัตโนมัติ เพื่อให้ Analytics นับเฉพาะ
+   สัปดาห์ปัจจุบันเท่านั้น ไม่ทับซ้อนกับสัปดาห์ก่อนหน้า
+   ข้อมูลสัปดาห์เก่าจะถูกเก็บไว้ใน attendanceHistory ก่อนเคลียร์
+========================================================= */
+
+function getCurrentWeekStartKey() {
+
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-US",
+            {
+                timeZone: "Asia/Bangkok",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                weekday: "short"
+            }
+        ).formatToParts(new Date());
+
+    const map = {};
+
+    parts.forEach(part => {
+        map[part.type] = part.value;
+    });
+
+    const weekdayIndex = {
+        Sun: 0, Mon: 1, Tue: 2, Wed: 3,
+        Thu: 4, Fri: 5, Sat: 6
+    }[map.weekday];
+
+    const daysSinceMonday =
+        weekdayIndex === 0
+        ? 6
+        : weekdayIndex - 1;
+
+    const bangkokNoonUTC =
+        new Date(
+            Date.UTC(
+                Number(map.year),
+                Number(map.month) - 1,
+                Number(map.day),
+                12
+            )
+        );
+
+    bangkokNoonUTC.setUTCDate(
+        bangkokNoonUTC.getUTCDate() -
+        daysSinceMonday
+    );
+
+    return (
+        bangkokNoonUTC.getUTCFullYear() +
+        "-" +
+        String(
+            bangkokNoonUTC.getUTCMonth() + 1
+        ).padStart(2, "0") +
+        "-" +
+        String(
+            bangkokNoonUTC.getUTCDate()
+        ).padStart(2, "0")
+    );
+
+}
+
+
+function checkWeeklyAttendanceReset() {
+
+    const currentWeekStart =
+        getCurrentWeekStartKey();
+
+
+    /*
+       ครั้งแรกที่มี field นี้ (ข้อมูลเก่าก่อนอัปเดต)
+       แค่ตั้งค่าเริ่มต้น ไม่ต้องเคลียร์อะไร
+    */
+
+    if (!guildData.attendanceWeekStart) {
+
+        guildData.attendanceWeekStart =
+            currentWeekStart;
+
+        return;
+
+    }
+
+
+    /*
+       ยังอยู่สัปดาห์เดิม ไม่ต้องทำอะไร
+    */
+
+    if (
+        guildData.attendanceWeekStart ===
+        currentWeekStart
+    )
+        return;
+
+
+    /*
+       ขึ้นสัปดาห์ใหม่แล้ว
+       -> เก็บ attendance ของสัปดาห์ที่ผ่านมาไว้เป็นประวัติ
+       -> เคลียร์ attendance ปัจจุบันให้ว่างสำหรับสัปดาห์นี้
+    */
+
+    guildData.attendanceHistory =
+        guildData.attendanceHistory || {};
+
+    const archive = {};
+
+    [
+        "polarity",
+        "guild_league",
+        "castle_siege"
+    ].forEach(key => {
+
+        const activity =
+            guildData.activities?.[key];
+
+        if (activity?.attendance) {
+
+            archive[key] =
+                JSON.parse(
+                    JSON.stringify(
+                        activity.attendance
+                    )
+                );
+
+            activity.attendance = {};
+
+        }
+
+    });
+
+    guildData.attendanceHistory[
+        guildData.attendanceWeekStart
+    ] = archive;
+
+    guildData.attendanceWeekStart =
+        currentWeekStart;
+
+    saveData();
+
+}
+
+
+/* =========================================================
    ATTENDANCE HELPERS
 ========================================================= */
 
@@ -8306,11 +8422,59 @@ function renderAnalytics() {
         : 0;
 
 
+    const weekStartDate =
+        guildData.attendanceWeekStart
+        ? new Date(
+            guildData.attendanceWeekStart +
+            "T00:00:00+07:00"
+          )
+        : null;
+
+    const weekEndDate =
+        weekStartDate
+        ? new Date(
+            weekStartDate.getTime() +
+            6 * 24 * 60 * 60 * 1000
+          )
+        : null;
+
+    const weekRangeLabel =
+        weekStartDate && weekEndDate
+        ? new Intl.DateTimeFormat(
+            "th-TH",
+            { day: "numeric", month: "short" }
+          ).format(weekStartDate) +
+          " – " +
+          new Intl.DateTimeFormat(
+            "th-TH",
+            { day: "numeric", month: "short" }
+          ).format(weekEndDate)
+        : "";
+
+
     container.innerHTML = `
 
         <div class="space-y-5">
 
             ${renderAnalyticsMiniCalendar()}
+
+            <div class="
+                flex
+                items-center
+                gap-2
+                text-xs
+                text-slate-500
+                px-1
+            ">
+                <i class="fa-solid fa-rotate text-purple-400"></i>
+                สถิติประจำสัปดาห์นี้
+                ${
+                    weekRangeLabel
+                    ? "(" + weekRangeLabel + ")"
+                    : ""
+                }
+                · รีเซ็ตอัตโนมัติทุกวันจันทร์
+            </div>
 
             <div class="
                 grid
@@ -9345,6 +9509,8 @@ onValue(
 
         }
 
+
+        checkWeeklyAttendanceReset();
 
         renderApp();
 

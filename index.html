@@ -1221,7 +1221,27 @@ const fallbackClasses = {
         icon: "fa-solid fa-dove"
     },
 
+    "Alithea": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
     "Alitia": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "Alithia": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "อาลิเทีย": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
+    },
+
+    "อาลีเทีย": {
         color: "#5eead4",
         icon: "fa-solid fa-dove"
     },
@@ -1234,6 +1254,11 @@ const fallbackClasses = {
     "Alitea (Druid)": {
         color: "#5eead4",
         icon: "fa-solid fa-dove"
+    },
+
+    "Alithea (Druid)": {
+        color: "#5eead4",
+        icon: "fa-solid fa-dove"
     }
 
 };
@@ -1243,7 +1268,8 @@ const fallbackClasses = {
     ชื่ออาชีพรุ่นเก่า/สะกดผิด ที่เก็บไว้ใน fallbackClasses
     เฉพาะเพื่อให้สมาชิกเก่าที่บันทึกด้วยชื่อเหล่านี้ยังขึ้นสี/
     โลโก้ถูกต้อง แต่ไม่ต้องการให้โผล่เป็นตัวเลือกตอนเพิ่ม/แก้
-    สมาชิกใหม่ (ดู rebuildClassList)
+    สมาชิกใหม่ (ดู rebuildClassList) - ตัวที่เป็นตัวเลือกหลัก
+    ให้เลือกตอนเพิ่มสมาชิกใหม่คือ "Alitea"
 */
 
 const legacyClassAliasKeys = [
@@ -1251,9 +1277,14 @@ const legacyClassAliasKeys = [
     "High Wizzard",
     "Night Walker(GunSliger)",
     "Night Walker (GunSliger)",
+    "Alithea",
     "Alitia",
+    "Alithia",
+    "อาลิเทีย",
+    "อาลีเทีย",
     "Alitia (Druid)",
-    "Alitea (Druid)"
+    "Alitea (Druid)",
+    "Alithea (Druid)"
 ];
 
 
@@ -1276,18 +1307,6 @@ let guildData = {
        }
     */
     dailyAttendance: {},
-
-    /*
-       วันจันทร์ (YYYY-MM-DD) ของสัปดาห์ Attendance
-       ปัจจุบัน ใช้เช็คว่าเข้าสัปดาห์ใหม่หรือยัง
-    */
-    attendanceWeekStart: null,
-
-    /*
-       เก็บ attendance ของสัปดาห์ก่อนๆ ไว้ดูย้อนหลัง
-       key = วันจันทร์ของสัปดาห์นั้น (YYYY-MM-DD)
-    */
-    attendanceHistory: {},
 
     classMaster: {},
 
@@ -5549,149 +5568,91 @@ function (
 
 
 /* =========================================================
-   WEEKLY ATTENDANCE RESET
+   DATE / WEEK HELPERS
    ---------------------------------------------------------
-   ทุกวันจันทร์ (เวลาไทย / Asia-Bangkok) ระบบจะเริ่มรอบ
-   Attendance ใหม่โดยอัตโนมัติ เพื่อให้ Analytics นับเฉพาะ
-   สัปดาห์ปัจจุบันเท่านั้น ไม่ทับซ้อนกับสัปดาห์ก่อนหน้า
-   ข้อมูลสัปดาห์เก่าจะถูกเก็บไว้ใน attendanceHistory ก่อนเคลียร์
+   Attendance แต่ละ event ผูกกับวันที่จริงที่มันเกิดขึ้น
+   (ไม่ใช่แค่ชื่อ/id ของ event slot เฉยๆ) ทำให้ Guild League
+   วันอังคารของสัปดาห์นี้ กับวันอังคารสัปดาห์หน้า เป็นคนละ
+   record กันโดยอัตโนมัติ ไม่ทับกัน และไม่ต้องรีเซ็ต/ย้าย
+   ข้อมูลเก่าทิ้งเลย - ประวัติแต่ละสัปดาห์อยู่ถาวรตามวันที่
+   ของมันเอง ฟังก์ชันด้านล่างแปลง "วันจันทร์ของสัปดาห์" ให้
+   เป็น "วันที่จริง" ของแต่ละวันในสัปดาห์นั้น และย้อนกลับ
 ========================================================= */
 
-function getCurrentWeekStartKey() {
+const WEEKDAY_OFFSET_FROM_MONDAY = {
+    Monday: 0, Tuesday: 1, Wednesday: 2,
+    Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6
+};
 
-    const parts =
-        new Intl.DateTimeFormat(
-            "en-US",
-            {
-                timeZone: "Asia/Bangkok",
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                weekday: "short"
-            }
-        ).formatToParts(new Date());
 
-    const map = {};
+function addDaysToDateKey(dateKey, days) {
 
-    parts.forEach(part => {
-        map[part.type] = part.value;
-    });
+    const d =
+        new Date(dateKey + "T12:00:00Z");
 
-    const weekdayIndex = {
-        Sun: 0, Mon: 1, Tue: 2, Wed: 3,
-        Thu: 4, Fri: 5, Sat: 6
-    }[map.weekday];
-
-    const daysSinceMonday =
-        weekdayIndex === 0
-        ? 6
-        : weekdayIndex - 1;
-
-    const bangkokNoonUTC =
-        new Date(
-            Date.UTC(
-                Number(map.year),
-                Number(map.month) - 1,
-                Number(map.day),
-                12
-            )
-        );
-
-    bangkokNoonUTC.setUTCDate(
-        bangkokNoonUTC.getUTCDate() -
-        daysSinceMonday
+    d.setUTCDate(
+        d.getUTCDate() + Number(days)
     );
 
     return (
-        bangkokNoonUTC.getUTCFullYear() +
+        d.getUTCFullYear() +
         "-" +
-        String(
-            bangkokNoonUTC.getUTCMonth() + 1
-        ).padStart(2, "0") +
+        String(d.getUTCMonth() + 1).padStart(2, "0") +
         "-" +
-        String(
-            bangkokNoonUTC.getUTCDate()
-        ).padStart(2, "0")
+        String(d.getUTCDate()).padStart(2, "0")
     );
 
 }
 
 
-function checkWeeklyAttendanceReset() {
+function getWeekStartKeyForDateKey(dateKey) {
 
-    const currentWeekStart =
-        getCurrentWeekStartKey();
+    const d =
+        new Date(dateKey + "T12:00:00Z");
+
+    const jsDay =
+        d.getUTCDay();
+
+    const daysSinceMonday =
+        jsDay === 0
+        ? 6
+        : jsDay - 1;
+
+    return addDaysToDateKey(
+        dateKey,
+        -daysSinceMonday
+    );
+
+}
 
 
-    /*
-       ครั้งแรกที่มี field นี้ (ข้อมูลเก่าก่อนอัปเดต)
-       แค่ตั้งค่าเริ่มต้น ไม่ต้องเคลียร์อะไร
-    */
+function getCurrentWeekStartKey() {
 
-    if (!guildData.attendanceWeekStart) {
+    return getWeekStartKeyForDateKey(
+        getBangkokDateKey(new Date())
+    );
 
-        guildData.attendanceWeekStart =
-            currentWeekStart;
-
-        return;
-
-    }
+}
 
 
-    /*
-       ยังอยู่สัปดาห์เดิม ไม่ต้องทำอะไร
-    */
+function getDateKeyForWeekdayInWeek(
+    weekMondayKey,
+    weekdayEn
+) {
+
+    const offset =
+        WEEKDAY_OFFSET_FROM_MONDAY[weekdayEn];
 
     if (
-        guildData.attendanceWeekStart ===
-        currentWeekStart
+        offset === undefined ||
+        !weekMondayKey
     )
-        return;
+        return null;
 
-
-    /*
-       ขึ้นสัปดาห์ใหม่แล้ว
-       -> เก็บ attendance ของสัปดาห์ที่ผ่านมาไว้เป็นประวัติ
-       -> เคลียร์ attendance ปัจจุบันให้ว่างสำหรับสัปดาห์นี้
-    */
-
-    guildData.attendanceHistory =
-        guildData.attendanceHistory || {};
-
-    const archive = {};
-
-    [
-        "polarity",
-        "guild_league",
-        "castle_siege"
-    ].forEach(key => {
-
-        const activity =
-            guildData.activities?.[key];
-
-        if (activity?.attendance) {
-
-            archive[key] =
-                JSON.parse(
-                    JSON.stringify(
-                        activity.attendance
-                    )
-                );
-
-            activity.attendance = {};
-
-        }
-
-    });
-
-    guildData.attendanceHistory[
-        guildData.attendanceWeekStart
-    ] = archive;
-
-    guildData.attendanceWeekStart =
-        currentWeekStart;
-
-    saveData();
+    return addDaysToDateKey(
+        weekMondayKey,
+        offset
+    );
 
 }
 
@@ -5823,19 +5784,16 @@ function ensureAttendance(activityKey) {
 function getAttendanceStatus(
     activityKey,
     eventId,
-    memberId,
-    weekSnapshot
+    dateKey,
+    memberId
 ) {
 
     const attendance =
-        (
-            weekSnapshot
-            ? weekSnapshot[activityKey]
-            : guildData.activities
-                ?.[activityKey]
-                ?.attendance
-        )
+        guildData.activities
+        ?.[activityKey]
+        ?.attendance
         ?.[eventId]
+        ?.[dateKey]
         ?.[memberId];
 
 
@@ -5847,14 +5805,16 @@ function getAttendanceStatus(
 
 function hasEventAttendance(
     activityKey,
-    eventId
+    eventId,
+    dateKey
 ) {
 
     const record =
         guildData.activities
         ?.[activityKey]
         ?.attendance
-        ?.[eventId];
+        ?.[eventId]
+        ?.[dateKey];
 
     return !!record &&
         Object.keys(record).length > 0;
@@ -5905,7 +5865,10 @@ function (
 
             eventName,
 
-            eventTime
+            eventTime,
+
+            date:
+                attendanceSelectedDate
 
         };
 
@@ -6090,7 +6053,8 @@ function renderAttendanceMemberRows() {
     rowsContainer.innerHTML =
         getEventAttendanceRowsHTML(
             attendanceEditingEvent.activityKey,
-            attendanceEditingEvent.eventId
+            attendanceEditingEvent.eventId,
+            attendanceEditingEvent.date
         );
 
 }
@@ -6133,6 +6097,7 @@ function getCombinedAttendanceRowsHTML() {
                 getAttendanceStatus(
                     activityKey,
                     event.id,
+                    event.date,
                     member.id
                 );
 
@@ -6183,7 +6148,8 @@ function getCombinedAttendanceRowsHTML() {
 
 function getEventAttendanceRowsHTML(
     activityKey,
-    eventId
+    eventId,
+    dateKey
 ) {
 
     const members =
@@ -6212,6 +6178,7 @@ function getEventAttendanceRowsHTML(
                 getAttendanceStatus(
                     activityKey,
                     eventId,
+                    dateKey,
                     member.id
                 );
 
@@ -6523,7 +6490,8 @@ function () {
         eventId,
         activityKey,
         eventName,
-        eventTime
+        eventTime,
+        date
     } =
         attendanceEditingEvent;
 
@@ -6537,6 +6505,9 @@ function () {
     if (!attendance[eventId])
         attendance[eventId] = {};
 
+    if (!attendance[eventId][date])
+        attendance[eventId][date] = {};
+
 
     (guildData.members || [])
         .forEach(member => {
@@ -6546,11 +6517,12 @@ function () {
                 getAttendanceStatus(
                     activityKey,
                     eventId,
+                    date,
                     member.id
                 );
 
 
-            attendance[eventId][member.id] = {
+            attendance[eventId][date][member.id] = {
 
                 status,
 
@@ -6576,7 +6548,9 @@ function () {
         eventName +
         " · " +
         eventTime +
-        " เรียบร้อย"
+        " (" +
+        formatThaiDate(date) +
+        ") เรียบร้อย"
     );
 
 };
@@ -6644,13 +6618,15 @@ function () {
 
         if (!attendance[event.id]) attendance[event.id] = {};
 
+        if (!attendance[event.id][event.date]) attendance[event.id][event.date] = {};
+
         (guildData.members || []).forEach(member => {
 
             const status =
                 pendingCombinedStatus[member.id]?.[roundIndex] ??
-                getAttendanceStatus(event.activity, event.id, member.id);
+                getAttendanceStatus(event.activity, event.id, event.date, member.id);
 
-            attendance[event.id][member.id] = { status, updatedAt: Date.now() };
+            attendance[event.id][event.date][member.id] = { status, updatedAt: Date.now() };
 
         });
 
@@ -6791,6 +6767,14 @@ function (dateKey) {
     attendanceSelectedDate =
         dateKey;
 
+    attendanceEditingEvent = null;
+
+    combinedAttendanceEvents = null;
+
+    pendingAttendanceStatus = {};
+
+    pendingCombinedStatus = {};
+
     renderAttendancePage();
 
 };
@@ -6810,6 +6794,14 @@ function (days) {
 
     attendanceSelectedDate =
         getBangkokDateKey(date);
+
+    attendanceEditingEvent = null;
+
+    combinedAttendanceEvents = null;
+
+    pendingAttendanceStatus = {};
+
+    pendingCombinedStatus = {};
 
     renderAttendancePage();
 
@@ -7535,7 +7527,8 @@ function renderAttendancePage() {
                                     const isDone =
                                         hasEventAttendance(
                                             event.activity,
-                                            event.id
+                                            event.id,
+                                            event.date
                                         );
 
                                     return `
@@ -7582,7 +7575,7 @@ function renderAttendancePage() {
                                     if (guildLeagueRounds.length < 2) return otherCardsHTML;
 
                                     const isCombinedSelected = !!combinedAttendanceEvents;
-                                    const isCombinedDone = guildLeagueRounds.every(r => hasEventAttendance(r.activity, r.id));
+                                    const isCombinedDone = guildLeagueRounds.every(r => hasEventAttendance(r.activity, r.id, r.date));
                                     const combinedTimes = guildLeagueRounds.map(r => r.time).join(" · ");
 
                                     const combinedCardHTML = `
@@ -7697,7 +7690,8 @@ function renderAttendancePage() {
                                 </h3>
 
                                 <p class="text-[11px] text-slate-500 mt-1">
-                                    กด Present / Low / Absent ให้แต่ละคน
+                                    ${formatThaiDate(attendanceEditingEvent.date)}
+                                    · กด Present / Low / Absent ให้แต่ละคน
                                     แล้วกด Save Attendance
                                 </p>
                             </div>
@@ -7812,7 +7806,8 @@ function renderAttendancePage() {
                         ">
                             ${getEventAttendanceRowsHTML(
                                 attendanceEditingEvent.activityKey,
-                                attendanceEditingEvent.eventId
+                                attendanceEditingEvent.eventId,
+                                attendanceEditingEvent.date
                             )}
                         </div>
 
@@ -7889,18 +7884,15 @@ function renderAttendancePage() {
 function isEventRecorded(
     activityKey,
     eventId,
-    weekSnapshot
+    dateKey
 ) {
 
     const record =
-        (
-            weekSnapshot
-            ? weekSnapshot[activityKey]
-            : guildData.activities
-                ?.[activityKey]
-                ?.attendance
-        )
-        ?.[eventId];
+        guildData.activities
+        ?.[activityKey]
+        ?.attendance
+        ?.[eventId]
+        ?.[dateKey];
 
     return !!record &&
         Object.keys(record).length > 0;
@@ -7915,7 +7907,10 @@ function getActivityEvents(activityKey) {
 
     return getCalendarDays()
         .flatMap(day =>
-            day.events
+            day.events.map(event => ({
+                ...event,
+                weekdayEn: day.en
+            }))
         )
         .filter(
             event =>
@@ -7928,21 +7923,37 @@ function getActivityEvents(activityKey) {
 }
 
 
+/*
+    คำนวณสถิติของสมาชิกคนหนึ่งสำหรับ "สัปดาห์ที่ระบุ"
+    (weekMondayKey = วันจันทร์ของสัปดาห์นั้น) โดยหาว่า
+    แต่ละ event ประจำสัปดาห์ (เช่น Guild League วันอังคาร)
+    ตรงกับวันที่จริงไหนในสัปดาห์นั้น แล้วเช็คว่าวันนั้น
+    ถูกบันทึกไว้จริงหรือยัง - event ที่ยังไม่ได้กดบันทึก
+    เลยในสัปดาห์นั้นจะไม่ถูกนับ (ไม่ทั้ง present/low/absent)
+*/
 function getMemberAttendanceStats(
     memberId,
     activityKey,
-    weekSnapshot
+    weekMondayKey
 ) {
 
     const events =
         getActivityEvents(
             activityKey
         )
+        .map(event => ({
+            ...event,
+            dateKey:
+                getDateKeyForWeekdayInWeek(
+                    weekMondayKey,
+                    event.weekdayEn
+                )
+        }))
         .filter(event =>
             isEventRecorded(
                 activityKey,
                 event.id,
-                weekSnapshot
+                event.dateKey
             )
         );
 
@@ -7956,8 +7967,8 @@ function getMemberAttendanceStats(
             getAttendanceStatus(
                 activityKey,
                 event.id,
-                memberId,
-                weekSnapshot
+                event.dateKey,
+                memberId
             );
 
         if (status === "present")
@@ -8014,60 +8025,38 @@ let analyticsFilter =
 
 
 /*
-    null = ดูสัปดาห์ปัจจุบัน (ข้อมูลสด ที่ยังแก้ไขได้)
-    ไม่งั้นเป็น key วันจันทร์ที่ชี้ไปยัง
-    guildData.attendanceHistory (สัปดาห์ที่ปิดไปแล้ว)
+    null = ดูสัปดาห์ปัจจุบัน ไม่งั้นเป็นวันจันทร์
+    (YYYY-MM-DD) ของสัปดาห์ที่กำลังดูย้อนหลัง
 */
 let analyticsViewedWeek =
     null;
 
 
-function getAnalyticsWeekList() {
-
-    const weeks =
-        [
-            guildData.attendanceWeekStart,
-            ...Object.keys(
-                guildData.attendanceHistory || {}
-            )
-        ].filter(Boolean);
-
-    return [...new Set(weeks)].sort();
-
-}
-
-
 window.shiftAnalyticsWeek =
 function (offset) {
 
-    const weeks =
-        getAnalyticsWeekList();
-
-    const currentKey =
+    const current =
         analyticsViewedWeek ||
-        guildData.attendanceWeekStart;
+        getCurrentWeekStartKey();
 
-    const idx =
-        weeks.indexOf(currentKey);
+    const newWeek =
+        addDaysToDateKey(
+            current,
+            Number(offset) * 7
+        );
 
-    if (idx === -1) return;
 
-    const newIdx =
-        idx + Number(offset);
+    /*
+       ห้ามดูล่วงหน้าไปในอนาคต เกินสัปดาห์ปัจจุบัน
+    */
 
-    if (
-        newIdx < 0 ||
-        newIdx >= weeks.length
-    )
+    if (newWeek > getCurrentWeekStartKey())
         return;
 
-    const newKey =
-        weeks[newIdx];
-
     analyticsViewedWeek =
-        newKey === guildData.attendanceWeekStart
+        newWeek === getCurrentWeekStartKey()
         ? null
-        : newKey;
+        : newWeek;
 
     renderAnalytics();
 
@@ -8497,31 +8486,15 @@ function renderAnalytics() {
     ];
 
 
-    const weekList =
-        getAnalyticsWeekList();
-
     const viewedWeekKey =
         analyticsViewedWeek ||
-        guildData.attendanceWeekStart;
+        getCurrentWeekStartKey();
 
     const isCurrentWeek =
         !analyticsViewedWeek;
 
-    const weekSnapshot =
-        isCurrentWeek
-        ? null
-        : guildData.attendanceHistory
-            ?.[viewedWeekKey];
-
-    const viewedIndex =
-        weekList.indexOf(viewedWeekKey);
-
-    const canViewOlder =
-        viewedIndex > 0;
-
     const canViewNewer =
-        viewedIndex !== -1 &&
-        viewedIndex < weekList.length - 1;
+        isCurrentWeek === false;
 
 
     let rows = [];
@@ -8534,14 +8507,14 @@ function renderAnalytics() {
                 getMemberAttendanceStats(
                     member.id,
                     "guild_league",
-                    weekSnapshot
+                    viewedWeekKey
                 ),
 
             castle_siege:
                 getMemberAttendanceStats(
                     member.id,
                     "castle_siege",
-                    weekSnapshot
+                    viewedWeekKey
                 )
 
         };
@@ -8669,7 +8642,10 @@ function renderAnalytics() {
                         isEventRecorded(
                             key,
                             event.id,
-                            weekSnapshot
+                            getDateKeyForWeekdayInWeek(
+                                viewedWeekKey,
+                                event.weekdayEn
+                            )
                         )
                     ).length,
             0
@@ -8739,11 +8715,6 @@ function renderAnalytics() {
                         ? "(" + weekRangeLabel + ")"
                         : ""
                     }
-                    ${
-                        isCurrentWeek
-                        ? " · รีเซ็ตอัตโนมัติทุกวันจันทร์"
-                        : ""
-                    }
                 </div>
 
                 <div class="
@@ -8754,15 +8725,12 @@ function renderAnalytics() {
 
                     <button
                         onclick="shiftAnalyticsWeek(-1)"
-                        ${canViewOlder ? "" : "disabled"}
                         title="สัปดาห์ก่อนหน้า"
                         class="
                             w-7 h-7
                             rounded-lg
                             bg-slate-800
                             hover:bg-slate-700
-                            disabled:opacity-30
-                            disabled:cursor-not-allowed
                         "
                     >
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -8808,23 +8776,6 @@ function renderAnalytics() {
                 </div>
 
             </div>
-
-            ${
-                weekList.length <= 1
-                ? `
-                    <div class="
-                        text-[11px]
-                        text-slate-600
-                        px-1
-                        -mt-3
-                    ">
-                        ยังไม่มีสัปดาห์ก่อนหน้าให้ย้อนดู
-                        จะเริ่มมีข้อมูลให้กดดูหลังผ่าน
-                        การรีเซ็ตวันจันทร์ครั้งแรกไปแล้ว
-                    </div>
-                `
-                : ""
-            }
 
             <div class="
                 grid
@@ -9465,7 +9416,7 @@ function renderAnalytics() {
                                     getMemberAttendanceStats(
                                         member.id,
                                         key,
-                                        weekSnapshot
+                                        viewedWeekKey
                                     );
 
 
@@ -9857,8 +9808,6 @@ onValue(
 
         }
 
-
-        checkWeeklyAttendanceReset();
 
         refreshMemberClassVisuals();
 
